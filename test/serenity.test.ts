@@ -5,7 +5,7 @@ import { serenityRate, stepWorld } from '../src/sim/world'
 import type { IntentInput, SimEvent, SimState } from '../src/sim/types'
 
 const DT = 1 / 30
-const I = (): IntentInput => ({ moveX: 0, moveY: 0, interact: false, craft: false })
+const I = (): IntentInput => ({ moveX: 0, moveY: 0, interact: false, craft: false, aimFacing: 0 as const })
 const S = CONFIG.serenity
 
 function run(s: SimState, n: number): { state: SimState; events: SimEvent[] } {

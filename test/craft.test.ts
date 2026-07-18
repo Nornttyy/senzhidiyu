@@ -5,7 +5,7 @@ import { canCraft, previewPos, stepWorld } from '../src/sim/world'
 import type { IntentInput, SimState } from '../src/sim/types'
 
 const DT = 1 / 30
-const I = (o: Partial<IntentInput> = {}): IntentInput => ({ moveX: 0, moveY: 0, interact: false, craft: false, ...o })
+const I = (o: Partial<IntentInput> = {}): IntentInput => ({ moveX: 0, moveY: 0, interact: false, craft: false, aimFacing: 0 as const, ...o })
 const rich = (s: SimState): SimState => ({
   ...s, world: { ...s.world, inventory: { wood: 10, fluorite: 5 } },
 })

@@ -8,7 +8,7 @@ import type { IntentInput, PhantomState, Vec2 } from '../src/sim/types'
 
 const DT = 1 / 30
 const P = CONFIG.phantom
-const I = (): IntentInput => ({ moveX: 0, moveY: 0, interact: false, craft: false })
+const I = (): IntentInput => ({ moveX: 0, moveY: 0, interact: false, craft: false, aimFacing: 0 as const })
 const ph = (o: Partial<PhantomState> = {}): PhantomState => ({
   pos: { x: 32, y: 32 }, mode: 'wander', modeT: 0, alpha: 1, target: { x: 32, y: 32 }, ...o,
 })
