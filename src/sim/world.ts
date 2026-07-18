@@ -1,6 +1,6 @@
 import { CONFIG } from '../config'
 import { stepPlayer } from './player'
-import { dist } from './vec'
+import { clamp, dist } from './vec'
 import type { IntentInput, ResourceNode, SimEvent, SimState, Vec2 } from './types'
 
 const EPS = 1e-8 // 与 characterAnimator 同源的帧时间漂移容差
@@ -15,6 +15,13 @@ export function nearestNodeIdx(nodes: readonly ResourceNode[], pos: Vec2, rangeM
     if (d <= bestD) { bestD = d; best = i }
   })
   return best
+}
+
+/** 安宁值每秒变化率：档位互斥取最高，注视为叠加项 */
+export function serenityRate(inZone: boolean, hasLantern: boolean, staring: boolean): number {
+  const S = CONFIG.serenity
+  const base = inZone ? S.zoneRegen : hasLantern ? S.lanternDrain : S.darkDrain
+  return base + (staring ? S.stareDrain : 0)
 }
 
 export function stepWorld(s: SimState, input: IntentInput, dt: number): { state: SimState; events: SimEvent[] } {
@@ -41,6 +48,17 @@ export function stepWorld(s: SimState, input: IntentInput, dt: number): { state:
       events.push({ type: 'harvest', kind: node.kind, nodeId: node.id, pos: node.pos, depleted: charges === 0 })
     }
   }
+
+  // 安宁值结算与迷失滞回（本切片玩家恒带提灯，黑暗档为完备性保留）
+  const inZone = dist(CONFIG.campfire, player.pos) <= CONFIG.light.campfireRadiusM
+    || world.posts.some((p) => dist(p, player.pos) <= CONFIG.light.postRadiusM)
+  const staring = world.phantom.mode === 'stare'
+    && dist(world.phantom.pos, player.pos) <= CONFIG.phantom.stareRange
+  const serenity = clamp(world.serenity + serenityRate(inZone, true, staring) * dt, 0, CONFIG.serenity.max)
+  let lost = world.lost
+  if (!lost && serenity < CONFIG.serenity.lostBelow) { lost = true; events.push({ type: 'lostEnter' }) }
+  else if (lost && serenity >= CONFIG.serenity.clearAt) { lost = false; events.push({ type: 'lostExit' }) }
+  world = { ...world, serenity, lost }
 
   return { state: { time: s.time + dt, player, world }, events }
 }
