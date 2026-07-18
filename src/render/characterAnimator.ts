@@ -5,6 +5,7 @@ const EPS = 1e-8 // 帧时间累积漂移容差：阈值跨越判定统一使用
 
 export interface AnimSample {
   action: PlayerAction
+  fromAction: PlayerAction
   facing: 1 | -1
   actionT: number
   prevActionT: number
@@ -22,7 +23,7 @@ const easeOutQuad = (x: number) => 1 - (1 - x) * (1 - x)
 const easeInOutQuad = (x: number) => (x < 0.5 ? 2 * x * x : 1 - (-2 * x + 2) ** 2 / 2)
 
 function breath(time: number): { scaleX: number; scaleY: number } {
-  const s = Math.sin((2 * Math.PI * time) / CONFIG.anim.breathPeriod) * CONFIG.anim.breathAmp
+  const s = ((Math.sin((2 * Math.PI * time) / CONFIG.anim.breathPeriod) + 1) / 2) * CONFIG.anim.breathAmp
   return { scaleY: 1 + s, scaleX: 1 - s * 0.5 } // 反向补偿保体积
 }
 
@@ -50,9 +51,11 @@ export function animate(s: AnimSample): { transform: SpriteTransform; events: An
     t.rotation = angle * s.facing
     if (s.prevGatherT + EPS < g.hitAt && s.gatherT + EPS >= g.hitAt) events.push('gatherHit')
   } else {
-    // idle：从行走停下的 stopRebound 秒内，前倾角衰减回正
-    const k = Math.min(1, s.actionT / CONFIG.anim.stopRebound)
-    t.rotation = CONFIG.anim.lean * s.facing * (1 - k)
+    // 停止回弹仅在"从行走停下"时播放（动作文档 §4.2）；采集收尾已自然回正
+    if (s.fromAction === 'walking') {
+      const k = Math.min(1, s.actionT / CONFIG.anim.stopRebound)
+      t.rotation = CONFIG.anim.lean * s.facing * (1 - k)
+    }
   }
   return { transform: t, events }
 }

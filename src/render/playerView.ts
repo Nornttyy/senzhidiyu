@@ -31,7 +31,7 @@ export class PlayerView {
     const actionT = sameAction ? lerp(pp.actionT, cp.actionT, alphaV) : cp.actionT
     const gatherT = sameAction ? lerp(pp.gatherT, cp.gatherT, alphaV) : cp.gatherT
     const sample: AnimSample = {
-      action: cp.action, facing: cp.facing,
+      action: cp.action, fromAction: cp.prevAction, facing: cp.facing,
       actionT, prevActionT: this.lastAction === cp.action ? this.lastActionT : 0,
       gatherT, prevGatherT: this.lastAction === cp.action ? this.lastGatherT : 0,
       time: timeS,

@@ -5,7 +5,7 @@ import type { IntentInput, PlayerState } from '../src/sim/types'
 
 const DT = 1 / 30
 const idle = (): PlayerState => ({
-  pos: { x: 20, y: 20 }, facing: 1, action: 'idle', actionT: 0, gatherT: 0, pendingFacingT: 0,
+  pos: { x: 20, y: 20 }, facing: 1, action: 'idle', prevAction: 'idle' as const, actionT: 0, gatherT: 0, pendingFacingT: 0,
 })
 const input = (o: Partial<IntentInput> = {}): IntentInput => ({ moveX: 0, moveY: 0, interact: false, ...o })
 const run = (p: PlayerState, inp: IntentInput, ticks: number) => {
@@ -63,6 +63,7 @@ describe('采集', () => {
     expect(p.action).toBe('gathering')
     p = run(p, input(), Math.ceil(CONFIG.gather.duration / DT))
     expect(p.action).toBe('idle')
+    expect(p.prevAction).toBe('gathering')
   })
   it('采集中移动输入立即取消回 walking', () => {
     let p = stepPlayer(idle(), input({ interact: true }), DT)

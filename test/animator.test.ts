@@ -3,7 +3,7 @@ import { CONFIG } from '../src/config'
 import { animate, type AnimSample } from '../src/render/characterAnimator'
 
 const base = (o: Partial<AnimSample> = {}): AnimSample => ({
-  action: 'idle', facing: 1, actionT: 1, prevActionT: 0.97, gatherT: 0, prevGatherT: 0, time: 10, ...o,
+  action: 'idle', fromAction: 'idle' as const, facing: 1, actionT: 1, prevActionT: 0.97, gatherT: 0, prevGatherT: 0, time: 10, ...o,
 })
 
 describe('确定性与待机', () => {
@@ -83,9 +83,13 @@ describe('采集', () => {
 
 describe('停止回弹', () => {
   it('walk 转 idle 后 stopRebound 内旋转从 lean 平滑衰减到 0', () => {
-    const early = animate(base({ action: 'idle', actionT: 0.01, prevActionT: 0 }))
-    const late = animate(base({ action: 'idle', actionT: CONFIG.anim.stopRebound, prevActionT: CONFIG.anim.stopRebound - 0.01 }))
+    const early = animate(base({ action: 'idle', fromAction: 'walking', actionT: 0.01, prevActionT: 0 }))
+    const late = animate(base({ action: 'idle', fromAction: 'walking', actionT: CONFIG.anim.stopRebound, prevActionT: CONFIG.anim.stopRebound - 0.01 }))
     expect(Math.abs(early.transform.rotation)).toBeGreaterThan(Math.abs(late.transform.rotation))
     expect(late.transform.rotation).toBeCloseTo(0, 3)
+  })
+  it('从采集回到待机不播放停止回弹', () => {
+    const r = animate(base({ action: 'idle', fromAction: 'gathering', actionT: 0.01, prevActionT: 0 }))
+    expect(r.transform.rotation).toBeCloseTo(0, 5)
   })
 })

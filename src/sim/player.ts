@@ -3,6 +3,7 @@ import type { IntentInput, PlayerState } from './types'
 
 export function stepPlayer(p: PlayerState, input: IntentInput, dt: number): PlayerState {
   const moving = input.moveX !== 0 || input.moveY !== 0
+  const before = p.action
   let { facing, action, actionT, gatherT, pendingFacingT } = p
   let { x, y } = p.pos
 
@@ -41,5 +42,9 @@ export function stepPlayer(p: PlayerState, input: IntentInput, dt: number): Play
     if (pendingFacingT >= CONFIG.player.flipDebounce) { facing = desired; pendingFacingT = 0 }
   }
 
-  return { pos: { x, y }, facing, action, actionT, gatherT, pendingFacingT }
+  return {
+    pos: { x, y }, facing, action,
+    prevAction: action === before ? p.prevAction : before, // 记录进入本次 action 前的动作，供来源相关的动画效果判别
+    actionT, gatherT, pendingFacingT,
+  }
 }
