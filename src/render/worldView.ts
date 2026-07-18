@@ -29,7 +29,6 @@ export class WorldView {
   private flame: Sprite
   private phantom: Sprite
   private phantomEcho: Sprite
-  private phantomGlow: Sprite
   private circle = new Graphics()
   private ghost = new Sprite()
   private shakes = new Map<number, number>()
@@ -68,12 +67,8 @@ export class WorldView {
     world.addChild(this.ghost)
 
     // 幻影：暗幕之上的屏幕层（自发光体不受暗幕遮蔽，远处黑暗中可见）。
-    // 黑底素材加法混合下中灰身躯加光量低，远看只剩淡烟——脉动光晕垫底 + 本体双重加法提亮
-    this.phantomGlow = new Sprite(this.glowTex)
-    this.phantomGlow.anchor.set(0.5)
-    this.phantomGlow.blendMode = 'add'
-    this.phantomGlow.tint = 0xbfdce8
-    overlay.addChild(this.phantomGlow)
+    // 黑底素材加法混合下中灰身躯加光量低——本体双重加法提亮成"可见的雾鬼"；
+    // 不带光晕/光圈（用户裁定：幻影不是光源，不该照亮周围）
     this.phantom = footSprite(tex.phantom, CONFIG.sizes.phantomH)
     this.phantom.blendMode = 'add'
     overlay.addChild(this.phantom)
@@ -233,11 +228,5 @@ export class WorldView {
     this.phantomEcho.position.set(sx, sy)
     this.phantomEcho.alpha = a * 0.7
     this.phantomEcho.visible = visible
-    const P = CONFIG.phantom
-    const pulse = 1 + P.glowPulse * Math.sin(timeS * Math.PI * 2 * P.glowPulseHz)
-    this.phantomGlow.position.set(sx, sy - CONFIG.sizes.phantomH * 0.5 * px)
-    this.phantomGlow.scale.set((P.glowRadiusM * px * 2 * pulse) / 512)
-    this.phantomGlow.alpha = a * P.glowAlpha * pulse
-    this.phantomGlow.visible = visible
   }
 }
