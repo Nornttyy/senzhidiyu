@@ -1,4 +1,4 @@
-import { Application, Container } from 'pixi.js'
+import { Application, Container, DisplacementFilter, Sprite, Texture } from 'pixi.js'
 import { CONFIG } from './config'
 import { Keyboard } from './input/keyboard'
 import { deriveHint } from './render/hints'
@@ -11,6 +11,7 @@ import { Scene } from './render/scene'
 import { loadTextures } from './render/textures'
 import { WorldView } from './render/worldView'
 import { Sfx } from './audio/sfx'
+import { Handmade, makeDisplacementTexture } from './render/handmade'
 import { Sim } from './sim/sim'
 import { initialSim, type SimState } from './sim/types'
 import { dist, lerp } from './sim/vec'
@@ -24,6 +25,7 @@ async function main(): Promise<void> {
     resizeTo: window,
     background: CONFIG.colors.night,
     antialias: true,
+    useBackBuffer: true, // 高级混合模式(overlay 等)需要回读缓冲
     // HiDPI 屏按物理像素渲染（上限 2 防 3x 屏过载），否则 1x 拉伸满屏锯齿
     resolution: Math.min(window.devicePixelRatio || 1, 2),
     autoDensity: true,
@@ -46,8 +48,22 @@ async function main(): Promise<void> {
   const overlay = new Container() // 暗幕之上：幻影等自发光体
   app.stage.addChild(overlay)
   const worldView = new WorldView(scene.world, overlay, textures, sim.state)
-  const lostFx = new LostFx(app, scene.world)
+  const noink = new URLSearchParams(location.search).has('noink') // 手作质感层对比开关
+  // 轮廓沸腾:噪声位移滤镜低帧步进,万物如逐帧手绘(与 lostFx 的滤镜组合共存)
+  let boilFilters: DisplacementFilter[] = []
+  let boilSprite: Sprite | null = null
+  if (!noink) {
+    boilSprite = new Sprite(makeDisplacementTexture())
+    boilSprite.renderable = false
+    app.stage.addChild(boilSprite)
+    const disp = new DisplacementFilter({ sprite: boilSprite, scale: CONFIG.handmade.boilAmpPx })
+    boilFilters = [disp]
+    scene.world.filters = [disp]
+  }
+  const lostFx = new LostFx(app, scene.world, boilFilters)
   app.stage.addChild(lostFx.container)
+  const handmade = noink ? null : new Handmade(app)
+  if (handmade) app.stage.addChild(handmade.container)
   const ui = new UI(app)
   app.stage.addChild(ui.container)
   ui.toast('夜很深，跟随微光。')
@@ -116,6 +132,12 @@ async function main(): Promise<void> {
 
     player.update(sim.prev, st, alphaV, elapsed, sinks)
     particles.update(realDt)
+    if (handmade) handmade.update(elapsed)
+    if (boilSprite) {
+      // 低帧步进移动位移采样窗,轮廓像逐帧重描
+      const bf = Math.floor(elapsed * CONFIG.handmade.boilFps)
+      boilSprite.position.set((bf * 13) % 128, (bf * 29) % 128)
+    }
     // 相机与精灵使用同一插值位置，否则每个 sim tick 相机产生锯齿抖动
     const pp = sim.prev.player.pos
     const cp = st.player.pos

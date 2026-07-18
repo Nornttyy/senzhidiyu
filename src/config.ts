@@ -39,6 +39,12 @@ export const CONFIG = {
     ores: [{ x: 7.5, y: 16.5 }, { x: 33, y: 15.5 }, { x: 21.5, y: 34.5 }],
   },
   sizes: { treeH: 3.2, oreH: 1.1, campfireH: 1.3, postH: 2.2, phantomH: 1.8 }, // 米
+  handmade: {
+    paperSeed: 20260718, paperAlpha: 0.22,
+    grainAlpha: 0.12, grainFrames: 4, grainFps: 9,
+    lightEdgeNoise: 0.16, lightBoilFps: 6, lightVariants: 3,
+    boilAmpPx: 2.2, boilFps: 8,
+  },
   lost: { rampRate: 1.5, lowpassHz: 700, lowpassOpenHz: 18000, desatMax: 0.75, vignetteMax: 0.9 },
   colors: { night: 0x101612, ground: 0x1c2418 },
 } as const

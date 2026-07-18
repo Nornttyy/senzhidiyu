@@ -1,4 +1,4 @@
-import { Application, ColorMatrixFilter, Container, Sprite, Texture } from 'pixi.js'
+import { Application, ColorMatrixFilter, Container, type Filter, Sprite, Texture } from 'pixi.js'
 import { CONFIG } from '../config'
 
 /** 屏幕边缘雾圈纹理：中心透明、边缘烟黑 */
@@ -23,7 +23,7 @@ export class LostFx {
   private desat = new ColorMatrixFilter()
   private k = 0
 
-  constructor(private app: Application, private worldC: Container) {
+  constructor(private app: Application, private worldC: Container, private baseFilters: Filter[] = []) {
     this.vignette.alpha = 0
     this.container.addChild(this.vignette)
   }
@@ -38,9 +38,9 @@ export class LostFx {
     if (this.k > 0.005) {
       this.desat.reset()
       this.desat.saturate(-CONFIG.lost.desatMax * this.k, false)
-      if (!this.worldC.filters) this.worldC.filters = [this.desat]
-    } else if (this.worldC.filters) {
-      this.worldC.filters = null as unknown as []
+      if (!this.worldC.filters || (this.worldC.filters as Filter[]).every((f) => f !== this.desat)) this.worldC.filters = [...this.baseFilters, this.desat]
+    } else if (this.worldC.filters && (this.worldC.filters as Filter[]).some((f) => f === this.desat)) {
+      this.worldC.filters = this.baseFilters.length ? [...this.baseFilters] : (null as unknown as [])
     }
   }
 }
