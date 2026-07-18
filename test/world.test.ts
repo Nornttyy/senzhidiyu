@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { CONFIG } from '../src/config'
+import { countOf } from '../src/sim/inventory'
 import { Sim } from '../src/sim/sim'
 import { initialSim } from '../src/sim/types'
 import { nearestNodeIdx, stepWorld } from '../src/sim/world'
@@ -120,6 +121,66 @@ describe('命中与破坏（挖完才掉）', () => {
     ]
     expect(nearestNodeIdx(nodes, { x: 20, y: 20 }, 1.6)).toBe(1)
     expect(nearestNodeIdx(nodes, { x: 5, y: 5 }, 1.6)).toBe(-1)
+  })
+})
+
+describe('掉落物理与拾取', () => {
+  const nearTree = () => initialSim(12.5, 14.1) // 树0 中档：4 次 4 木
+  const woodTotal = (s: SimState) =>
+    countOf(s.world.slots, 'wood') + s.world.drops.filter((d) => d.kind === 'wood').length
+
+  it('破坏散出 4 木：地上+包内守恒', () => {
+    const { state } = chop(nearTree(), 4)
+    expect(woodTotal(state)).toBe(4)
+  })
+  it('掉落物滑停且不出界；走过掉落堆全部吸入', () => {
+    let { state, events } = chop(nearTree(), 4)
+    const settled = runTicks(state, I(), 30) // 1 秒滑停
+    state = settled.state
+    events = [...events, ...settled.events]
+    for (const d of state.world.drops) {
+      expect(Math.hypot(d.vel.x, d.vel.y)).toBeLessThan(0.05)
+      expect(d.pos.x).toBeGreaterThanOrEqual(1)
+      expect(d.pos.x).toBeLessThanOrEqual(39)
+    }
+    // 穿过树位向北再折返，扫掉整片掉落（散射半径 ≤0.6m，路径覆盖）
+    const sweep1 = runTicks(state, I({ moveY: -1 }), 20)
+    const sweep2 = runTicks(sweep1.state, I({ moveX: -1 }), 8)
+    const sweep3 = runTicks(sweep2.state, I({ moveX: 1 }), 16)
+    state = sweep3.state
+    events = [...events, ...sweep1.events, ...sweep2.events, ...sweep3.events]
+    const pickedWood = events.filter((e) => e.type === 'pickup' && e.kind === 'wood').length
+    expect(pickedWood).toBeGreaterThan(0)
+    expect(countOf(state.world.slots, 'wood')).toBe(pickedWood)
+    expect(woodTotal(state)).toBe(4) // 地上+包内守恒
+  })
+  it('背包全满掉落物滞留并节流 invFull', () => {
+    let s = nearTree()
+    // 0 号留斧头，其余全塞满
+    s = {
+      ...s,
+      world: {
+        ...s.world,
+        slots: s.world.slots.map((x, i) => (i === 0 ? x : { kind: 'fluorite' as const, count: 99 })),
+      },
+    }
+    const r = chop(s, 4)
+    const after = runTicks(r.state, I({ moveY: -1 }), 20) // 走进掉落堆触发拾取尝试
+    const stay = runTicks(after.state, I(), 70)           // 原地 ~2.3 秒持续尝试
+    expect(stay.state.world.drops.length).toBeGreaterThan(0)
+    const fulls = [...r.events, ...after.events, ...stay.events].filter((e) => e.type === 'invFull')
+    expect(fulls.length).toBeGreaterThanOrEqual(1)
+    expect(fulls.length).toBeLessThanOrEqual(2) // ~3 秒窗口 3s 节流
+  })
+  it('树苗掉落种子确定：同种子同结果，且中档只 roll 一次', () => {
+    const saps = (seed: number) => {
+      const { state, events } = chop(initialSim(12.5, 14.1, seed), 4)
+      const ground = state.world.drops.filter((d) => d.kind === 'sapling').length
+      const picked = events.filter((e) => e.type === 'pickup' && e.kind === 'sapling').length
+      return ground + picked
+    }
+    expect(saps(7)).toBe(saps(7))
+    expect([0, 1]).toContain(saps(7))
   })
 })
 
