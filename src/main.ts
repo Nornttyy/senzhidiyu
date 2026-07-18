@@ -1,11 +1,12 @@
-import { Application } from 'pixi.js'
+import { Application, Container } from 'pixi.js'
 import { CONFIG } from './config'
 import { Keyboard } from './input/keyboard'
-import { LightLayer } from './render/lightLayer'
+import { LightLayer, type LightSpec } from './render/lightLayer'
 import { Particles } from './render/particles'
 import { PlayerView } from './render/playerView'
 import { Scene } from './render/scene'
 import { loadTextures } from './render/textures'
+import { WorldView } from './render/worldView'
 import { Sfx } from './audio/sfx'
 import { Sim } from './sim/sim'
 import { initialSim } from './sim/types'
@@ -29,7 +30,7 @@ async function main(): Promise<void> {
   const sfx = new Sfx()
   const scene = new Scene(app)
   const particles = new Particles(scene.world)
-  const sim = new Sim(initialSim(CONFIG.world.width / 2, CONFIG.world.height / 2))
+  const sim = new Sim(initialSim(CONFIG.player.spawn.x, CONFIG.player.spawn.y))
   const kb = new Keyboard()
   kb.attach(window)
   kb.onFirstInput = () => sfx.unlock()
@@ -38,6 +39,9 @@ async function main(): Promise<void> {
 
   const light = new LightLayer(app)
   app.stage.addChild(light.container)
+  const overlay = new Container() // 暗幕之上：幻影等自发光体
+  app.stage.addChild(overlay)
+  const worldView = new WorldView(scene.world, overlay, textures, sim.state)
 
   const sinks = {
     footstep(xM: number, yM: number) { particles.dust(xM, yM); sfx.footstep() },
@@ -48,23 +52,33 @@ async function main(): Promise<void> {
   app.ticker.add((ticker) => {
     const realDt = Math.min(0.1, ticker.deltaMS / 1000)
     elapsed += realDt
-    sim.advance(realDt, { ...kb.intent(), interact: kb.consumeInteract(), craft: false })
+    sim.advance(realDt, { ...kb.intent(), interact: kb.consumeInteract(), craft: kb.consumeCraft() })
     const alphaV = sim.alpha()
-    player.update(sim.prev, sim.state, alphaV, elapsed, sinks)
+    const st = sim.state
+
+    for (const e of sim.drainEvents()) {
+      if (e.type === 'harvest') worldView.shake(e.nodeId)
+    }
+
+    player.update(sim.prev, st, alphaV, elapsed, sinks)
     particles.update(realDt)
     // 相机与精灵使用同一插值位置，否则每个 sim tick 相机产生锯齿抖动
     const pp = sim.prev.player.pos
-    const cp = sim.state.player.pos
-    scene.follow(pp.x + (cp.x - pp.x) * alphaV, pp.y + (cp.y - pp.y) * alphaV)
-    const px = CONFIG.pxPerMeter
-    light.update(
-      [{
-        xPx: app.screen.width / 2,
-        yPx: app.screen.height / 2 - CONFIG.player.heightM * px * 0.45,
-        radiusPx: CONFIG.light.lanternRadiusM * px,
-      }],
-      elapsed,
-    )
+    const cp = st.player.pos
+    const ipx = pp.x + (cp.x - pp.x) * alphaV
+    const ipy = pp.y + (cp.y - pp.y) * alphaV
+    scene.follow(ipx, ipy)
+    worldView.update(sim.prev, st, alphaV, elapsed, realDt)
+
+    const lights: LightSpec[] = [
+      { xM: ipx, yM: ipy - CONFIG.player.heightM * 0.45, radiusM: CONFIG.light.lanternRadiusM },
+      { xM: CONFIG.campfire.x, yM: CONFIG.campfire.y - 0.5, radiusM: CONFIG.light.campfireRadiusM, flicker: 1.8 },
+      ...st.world.posts.map((p) => ({ xM: p.x, yM: p.y - 1.8, radiusM: CONFIG.light.postRadiusM })),
+      ...st.world.nodes.filter((n) => n.charges > 0).map((n) => n.kind === 'ore'
+        ? { xM: n.pos.x, yM: n.pos.y - 0.5, radiusM: CONFIG.light.oreGlow.radiusM, alpha: CONFIG.light.oreGlow.alpha, flicker: 0.5 }
+        : { xM: n.pos.x, yM: n.pos.y - 1.6, radiusM: CONFIG.light.treeGlow.radiusM, alpha: CONFIG.light.treeGlow.alpha, flicker: 0.5 }),
+    ]
+    light.update(lights, scene.world.position, elapsed)
   })
 }
 
