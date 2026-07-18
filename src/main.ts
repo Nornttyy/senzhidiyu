@@ -15,7 +15,14 @@ import { initialSim } from './sim/types'
 // 双方互等造成无异常的永久黑屏死锁（dev 不打包无此问题）。
 async function main(): Promise<void> {
   const app = new Application()
-  await app.init({ resizeTo: window, background: CONFIG.colors.night, antialias: true })
+  await app.init({
+    resizeTo: window,
+    background: CONFIG.colors.night,
+    antialias: true,
+    // HiDPI 屏按物理像素渲染（上限 2 防 3x 屏过载），否则 1x 拉伸满屏锯齿
+    resolution: Math.min(window.devicePixelRatio || 1, 2),
+    autoDensity: true,
+  })
   document.body.appendChild(app.canvas)
 
   const textures = await loadTextures(app.renderer)
