@@ -1,7 +1,7 @@
 import { CONFIG } from '../config'
 
 export interface Vec2 { readonly x: number; readonly y: number }
-export type PlayerAction = 'idle' | 'walking' | 'gathering'
+export type PlayerAction = 'idle' | 'walking' // 移动基态；采集为正交通道 PlayerState.gathering
 
 export interface PlayerState {
   readonly pos: Vec2
@@ -9,6 +9,7 @@ export interface PlayerState {
   readonly action: PlayerAction
   readonly prevAction: PlayerAction // 进入当前 action 之前的动作（用于停止回弹等来源判别）
   readonly actionT: number          // 当前动作已持续秒数
+  readonly gathering: boolean       // 采集通道（与移动正交）
   readonly gatherT: number          // 采集循环内秒数
   readonly pendingFacingT: number   // 反向输入累计秒数（翻转防抖）
 }
@@ -52,8 +53,9 @@ export interface SimState {
 export interface IntentInput {
   readonly moveX: number
   readonly moveY: number
-  readonly interact: boolean // 采集（鼠标左键）边沿
+  readonly interact: boolean // 采集意愿：按住或本帧边沿（Sim 首步吃边沿缓存、后续步吃 held）
   readonly craft: boolean    // 合成/放置（E）边沿
+  readonly aimFacing: 0 | 1 | -1 // 指针在屏幕中线的侧位；0=无指针信息
 }
 
 export type SimEvent =
@@ -86,7 +88,7 @@ export function initialWorld(seed: number): WorldState {
 export function initialSim(x: number, y: number, seed = 20260718): SimState {
   return {
     time: 0,
-    player: { pos: { x, y }, facing: 1, action: 'idle', prevAction: 'idle', actionT: 0, gatherT: 0, pendingFacingT: 0 },
+    player: { pos: { x, y }, facing: 1, action: 'idle', prevAction: 'idle', actionT: 0, gathering: false, gatherT: 0, pendingFacingT: 0 },
     world: initialWorld(seed),
   }
 }

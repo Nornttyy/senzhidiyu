@@ -8,6 +8,7 @@ export const CONFIG = {
     duration: 1.2, windup: 0.3, swing: 0.15, hitAt: 0.45,
     backAngle: -8 * DEG, chopAngle: 15 * DEG,
     rangeM: 1.6,
+    moveSpeedFactor: 0.6, // 边走边砍移速系数
   },
   anim: {
     breathAmp: 0.015, breathPeriod: 2.5,
