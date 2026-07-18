@@ -115,7 +115,7 @@ export class Menu {
     } else if (this.view === 'help') {
       const body = document.createElement('div')
       body.className = 'body'
-      body.innerHTML = 'WASD / 方向键 —— 移动<br>鼠标左键（可长按）—— 朝指针方向挥砍，采集低语木与萤石<br>E —— 靠近篝火合成提灯柱 / 再按放置<br><br>黑暗与幻影的注视会消磨安宁，回到灯火旁恢复。<br>攒够 10 木 5 萤，把光种进森林里。'
+      body.innerHTML = 'WASD / 方向键 —— 移动<br>鼠标左键（可长按）—— 手持斧头朝指针方向挥砍，挖完才会掉落<br>数字键 1-9 / 滚轮 —— 切换热键栏<br>E —— 打开背包（点格子搬移，材料够可合成提灯柱）<br>鼠标右键 —— 在白圈内放置提灯柱 / 种下树苗<br><br>黑暗与幻影的注视会消磨安宁，回到灯火旁恢复。<br>攒够 10 木 5 萤，把光种进森林里。'
       add(body)
       add(this.button('返回', () => this.show(this.from)))
     } else if (this.view === 'settings') {

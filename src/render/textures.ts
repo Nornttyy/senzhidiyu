@@ -2,11 +2,18 @@ import { Assets, Container, Graphics, Texture, type Renderer } from 'pixi.js'
 
 export interface GameTextures {
   seeker: Texture; tree: Texture; ore: Texture; campfire: Texture; post: Texture; phantom: Texture
+  axe: Texture; wood: Texture; fluorite: Texture; sapling: Texture; heart: Texture
 }
 
 const FILES: Record<keyof GameTextures, string> = {
   seeker: 'seeker.png', tree: 'whisper-tree.png', ore: 'lumina-ore.png',
   campfire: 'campfire.png', post: 'lantern-post.png', phantom: 'phantom.png',
+  axe: 'axe.png', wood: 'wood.png', fluorite: 'fluorite.png', sapling: 'sapling.png', heart: 'heart.png',
+}
+
+/** 物品图标/掉落物纹理（lanternPost 复用立绘） */
+export function iconTex(t: GameTextures, k: import('../sim/types').ItemKind): Texture {
+  return k === 'lanternPost' ? t.post : t[k]
 }
 
 /** 素材缺失时的程序占位（形状 y 以脚底为 0 向上为负） */
@@ -49,6 +56,24 @@ const builders: Record<keyof GameTextures, (g: Graphics) => void> = {
     g.circle(-4, -60, 2).fill(0xdce8ee)
     g.circle(4, -60, 2).fill(0xdce8ee)
   },
+  axe(g) {
+    g.roundRect(-5, -60, 10, 60, 4).fill(0x6b563a)
+    g.poly([-6, -60, -30, -50, -30, -30, -6, -36]).fill(0x8a8f80)
+  },
+  wood(g) {
+    g.roundRect(-26, -20, 52, 20, 8).fill(0x3c554c)
+    g.circle(-26, -10, 9).fill(0xcbb99a)
+  },
+  fluorite(g) { g.poly([-12, 0, 0, -34, 12, 0]).fill(0x8ac0e8) },
+  sapling(g) {
+    g.rect(-2, -26, 4, 26).fill(0x4c5a44)
+    g.circle(0, -30, 8).fill(0x5a8a6a)
+  },
+  heart(g) {
+    g.circle(-7, -18, 8).fill(0x9a3040)
+    g.circle(7, -18, 8).fill(0x9a3040)
+    g.poly([-14, -14, 0, 2, 14, -14]).fill(0x9a3040)
+  },
 }
 
 async function loadOne(renderer: Renderer, name: keyof GameTextures): Promise<Texture> {
@@ -69,9 +94,11 @@ async function loadOne(renderer: Renderer, name: keyof GameTextures): Promise<Te
 }
 
 export async function loadTextures(renderer: Renderer): Promise<GameTextures> {
-  const [seeker, tree, ore, campfire, post, phantom] = await Promise.all([
+  const [seeker, tree, ore, campfire, post, phantom, axe, wood, fluorite, sapling, heart] = await Promise.all([
     loadOne(renderer, 'seeker'), loadOne(renderer, 'tree'), loadOne(renderer, 'ore'),
     loadOne(renderer, 'campfire'), loadOne(renderer, 'post'), loadOne(renderer, 'phantom'),
+    loadOne(renderer, 'axe'), loadOne(renderer, 'wood'), loadOne(renderer, 'fluorite'),
+    loadOne(renderer, 'sapling'), loadOne(renderer, 'heart'),
   ])
-  return { seeker, tree, ore, campfire, post, phantom }
+  return { seeker, tree, ore, campfire, post, phantom, axe, wood, fluorite, sapling, heart }
 }

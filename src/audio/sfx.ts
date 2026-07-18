@@ -177,4 +177,37 @@ export class Sfx {
     o.stop(ctx.currentTime + 0.3)
     this.ping(1568, 0.4, 0.05, 0.08)
   }
+
+  /** 拾取：短促上扬 blip */
+  pickupPop(): void { this.ping(660, 0.09, 0.07); this.ping(990, 0.07, 0.05, 0.03) }
+
+  /** 树倒：低频俯冲 + 落地闷响 */
+  treeFall(): void {
+    if (!this.ctx || !this.out) return
+    const ctx = this.ctx
+    const o = ctx.createOscillator()
+    o.frequency.setValueAtTime(220, ctx.currentTime)
+    o.frequency.exponentialRampToValueAtTime(45, ctx.currentTime + 0.7)
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(0.001, ctx.currentTime)
+    g.gain.linearRampToValueAtTime(0.22, ctx.currentTime + 0.12)
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8)
+    o.connect(g).connect(this.out)
+    o.start()
+    o.stop(ctx.currentTime + 0.85)
+    this.noiseBurst(160, 0.3, 0.18)
+  }
+
+  /** 矿碎：三连噪声脆响 */
+  oreCrush(): void {
+    this.noiseBurst(2400, 0.06, 0.12)
+    this.noiseBurst(1400, 0.09, 0.12)
+    this.noiseBurst(700, 0.14, 0.1)
+  }
+
+  /** 种植：低频软挖土 + 轻芽音 */
+  plantDig(): void { this.noiseBurst(200, 0.12, 0.12); this.ping(520, 0.15, 0.04, 0.08) }
+
+  /** 拒绝/满包：闷钝 */
+  deny(): void { this.ping(140, 0.15, 0.08) }
 }
