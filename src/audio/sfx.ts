@@ -21,11 +21,11 @@ export class Sfx {
     this.startWind(ctx, master)
     this.startHum(ctx, master)
     // 部分浏览器（如 iOS Safari）键盘手势不授予音频激活，新建即 suspended
-    if (ctx.state === 'suspended') void ctx.resume()
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {}) // 中断序列下可能 reject,静默即可
   }
 
   /** 标签页隐藏/系统打断后被挂起的 context 重新拉起 */
-  rearm(): void { if (this.ctx?.state === 'suspended') void this.ctx.resume() }
+  rearm(): void { if (this.ctx?.state === 'suspended') this.ctx.resume().catch(() => {}) }
 
   /** 迷失=true 时全局闷化 */
   setMuffled(on: boolean): void {

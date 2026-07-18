@@ -92,6 +92,22 @@ assert(s.lost === true, `安宁值 20 触发迷失 (lost=${s.lost})`)
 await page.waitForTimeout(1200)
 await shot('e2e-4-lost-vignette')
 
+// 6) 恢复路径:注入高安宁值退出迷失(滤镜卸载),再入迷失(滤镜重挂)——覆盖 lostExit 分支
+await page.evaluate(() => {
+  const sim = window.__whispers.sim
+  sim.state = { ...sim.state, world: { ...sim.state.world, serenity: 100 } }
+})
+await page.waitForTimeout(400)
+s = await state()
+assert(s.lost === false, `安宁值回满解除迷失 (lost=${s.lost})`)
+await page.evaluate(() => {
+  const sim = window.__whispers.sim
+  sim.state = { ...sim.state, world: { ...sim.state.world, serenity: 20 } }
+})
+await page.waitForTimeout(400)
+s = await state()
+assert(s.lost === true, `再入迷失滤镜重挂 (lost=${s.lost})`)
+
 assert(errors === 0, `无页面错误 (errors=${errors})`)
 console.log(process.exitCode ? '[E2E] FAIL' : '[E2E] PASS')
 await browser.close()
