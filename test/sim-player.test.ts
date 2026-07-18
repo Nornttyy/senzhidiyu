@@ -7,7 +7,7 @@ const DT = 1 / 30
 const idle = (): PlayerState => ({
   pos: { x: 20, y: 20 }, facing: 1, action: 'idle', prevAction: 'idle' as const, actionT: 0, gatherT: 0, pendingFacingT: 0,
 })
-const input = (o: Partial<IntentInput> = {}): IntentInput => ({ moveX: 0, moveY: 0, interact: false, ...o })
+const input = (o: Partial<IntentInput> = {}): IntentInput => ({ moveX: 0, moveY: 0, interact: false, craft: false, ...o })
 const run = (p: PlayerState, inp: IntentInput, ticks: number) => {
   for (let i = 0; i < ticks; i++) p = stepPlayer(p, inp, DT)
   return p

@@ -14,7 +14,7 @@ describe('intentFromKeys', () => {
 })
 
 describe('Sim 固定步长', () => {
-  const input = { moveX: 1, moveY: 0, interact: false }
+  const input = { moveX: 1, moveY: 0, interact: false, craft: false }
   it('累积 realDt 按 1/30 整步执行，余量留在 alpha', () => {
     const sim = new Sim(initialSim(20, 20))
     sim.advance(0.05, input) // 1 步 + 余 0.0167
@@ -35,16 +35,16 @@ describe('Sim 固定步长', () => {
   })
   it('interact 边沿只投递给首个 sim 步', () => {
     const sim = new Sim(initialSim(20, 20))
-    sim.advance(3 / 30, { moveX: 1, moveY: 0, interact: true })
+    sim.advance(3 / 30, { moveX: 1, moveY: 0, interact: true, craft: false })
     // 第1步边沿进入采集，第2步移动取消采集回到行走，
     // 第3步若边沿泄漏到后续步会再次进入采集——期望仍为行走
     expect(sim.state.player.action).toBe('walking')
   })
   it('无步帧消费的 interact 边沿被缓存到下一次实际步进', () => {
     const sim = new Sim(initialSim(20, 20))
-    sim.advance(0.01, { moveX: 0, moveY: 0, interact: true }) // 累积不足一步
+    sim.advance(0.01, { moveX: 0, moveY: 0, interact: true, craft: false }) // 累积不足一步
     expect(sim.state.player.action).toBe('idle')
-    sim.advance(0.03, { moveX: 0, moveY: 0, interact: false }) // 此帧才步进
+    sim.advance(0.03, { moveX: 0, moveY: 0, interact: false, craft: false }) // 此帧才步进
     expect(sim.state.player.action).toBe('gathering')
   })
 })

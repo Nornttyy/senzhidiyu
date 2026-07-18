@@ -22,6 +22,7 @@ export class Sim {
       this.state = {
         time: this.state.time + this.dt,
         player: stepPlayer(this.state.player, { ...input, interact: this.pendingInteract }, this.dt),
+        world: this.state.world, // 过渡：Task 2 起由 stepWorld 步进
       }
       this.pendingInteract = false // 只投递给第一个实际执行的步
     }

@@ -48,7 +48,7 @@ async function main(): Promise<void> {
   app.ticker.add((ticker) => {
     const realDt = Math.min(0.1, ticker.deltaMS / 1000)
     elapsed += realDt
-    sim.advance(realDt, { ...kb.intent(), interact: kb.consumeInteract() })
+    sim.advance(realDt, { ...kb.intent(), interact: kb.consumeInteract(), craft: false })
     const alphaV = sim.alpha()
     player.update(sim.prev, sim.state, alphaV, elapsed, sinks)
     particles.update(realDt)
