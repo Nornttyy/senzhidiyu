@@ -112,17 +112,12 @@ async function main(): Promise<void> {
   const playerLight: LightSpec = { xM: 0, yM: 0, radiusM: CONFIG.light.lanternRadiusM, phase: 0 }
   const allLights: LightSpec[] = [playerLight]
   let lightsDirty = true
+  // 树/矿夜间不发光（2026-07-18 用户裁定，撤掉切片A的寻路微光）——静态灯只剩篝火与提灯柱
   const staticLights = (st: SimState): LightSpec[] => [
     { xM: CONFIG.campfire.x, yM: CONFIG.campfire.y - 0.5, radiusM: CONFIG.light.campfireRadiusM, flicker: 1.8, phase: 1 },
     ...st.world.posts.map((p, i) => ({
       xM: p.x, yM: p.y - CONFIG.sizes.postH * 0.82, radiusM: CONFIG.light.postRadiusM, phase: 2 + i,
     })),
-    ...st.world.nodes.map((n) => {
-      const g = n.kind === 'ore' ? CONFIG.tiers.ore[n.tier]!.glow : CONFIG.tiers.tree[n.tier]!.glow
-      return n.kind === 'ore'
-        ? { xM: n.pos.x, yM: n.pos.y - 0.5, radiusM: CONFIG.light.oreGlow.radiusM * g, alpha: CONFIG.light.oreGlow.alpha, flicker: 0.5, phase: 10 + n.id }
-        : { xM: n.pos.x, yM: n.pos.y - 1.6, radiusM: CONFIG.light.treeGlow.radiusM * g, alpha: CONFIG.light.treeGlow.alpha, flicker: 0.5, phase: 10 + n.id }
-    }),
   ]
 
   app.ticker.add((ticker) => {
@@ -168,14 +163,12 @@ async function main(): Promise<void> {
         case 'nodeHit': worldView.shake(e.nodeId); break
         case 'nodeBroken':
           worldView.breakNode(e)
-          lightsDirty = true // 微光熄灭
           if (e.kind === 'tree') { particles.firefly(e.pos.x, e.pos.y - 1.2); sfx.treeFall() }
           else { particles.glint(e.pos.x, e.pos.y - 0.5); sfx.oreCrush() }
           break
         case 'pickup': particles.glint(e.pos.x, e.pos.y - 0.3); sfx.pickupPop(); ui.bump(); break
         case 'invFull': ui.toast('背包满了'); sfx.deny(); break
         case 'planted': sfx.plantDig(); break
-        case 'grown': lightsDirty = true; break
         case 'crafted': sfx.chime(); ui.toast(`合成：${CONFIG.recipes[e.recipe]!.name}`); break
         case 'postPlaced':
           sfx.placeThump()

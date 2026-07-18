@@ -17,7 +17,6 @@ export const CONFIG = {
   light: {
     lanternRadiusM: 3.5, flickerAmp: 0.06, darkness: 0.94,
     campfireRadiusM: 6, postRadiusM: 5,
-    oreGlow: { radiusM: 1.2, alpha: 0.35 }, treeGlow: { radiusM: 0.9, alpha: 0.25 },
   },
   serenity: {
     max: 100, initial: 100, lostBelow: 30, clearAt: 40,
@@ -42,13 +41,13 @@ export const CONFIG = {
   ],
   tiers: {
     tree: [
-      { charges: 3, drop: 2, heightM: 2.4, glow: 0.7, saplingRolls: 1 },
-      { charges: 4, drop: 4, heightM: 3.2, glow: 1.0, saplingRolls: 1 },
-      { charges: 5, drop: 6, heightM: 4.2, glow: 1.3, saplingRolls: 2 },
+      { charges: 3, drop: 2, heightM: 2.4, saplingRolls: 1 },
+      { charges: 4, drop: 4, heightM: 3.2, saplingRolls: 1 },
+      { charges: 5, drop: 6, heightM: 4.2, saplingRolls: 2 },
     ],
     ore: [
-      { charges: 3, drop: 2, heightM: 0.9, glow: 0.85 },
-      { charges: 5, drop: 5, heightM: 1.4, glow: 1.15 },
+      { charges: 3, drop: 2, heightM: 0.9 },
+      { charges: 5, drop: 5, heightM: 1.4 },
     ],
   },
   corpse: { treeFallS: 0.8, treeFadeS: 1.5, oreCrushS: 0.5, oreFadeS: 1.2 },
