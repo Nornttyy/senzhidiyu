@@ -82,6 +82,16 @@ describe('篝火', () => {
     expect(campfireRadius(after, r.state.time)).toBeCloseTo(CONFIG.light.campfireM, 2)
     expect(r.state.world.slots[woodSlot]!.count).toBe(4)
   })
+  it('燃着篝火圈内 hp 回复;残烬圈内不回复', () => {
+    let s = withCampfire()
+    s = { ...s, world: { ...s.world, hp: 40 } }
+    s = run(s, I(), 30).state // 1 秒
+    expect(s.world.hp).toBeCloseTo(40 + CONFIG.hp.fireRegen, 1)
+    // 快进烧尽成残烬
+    s = { ...s, world: { ...s.world, hp: 40, campfires: s.world.campfires.map((c) => ({ ...c, fedAt: c.fedAt - 999 })) } }
+    s = run(s, I(), 30).state
+    expect(s.world.hp).toBe(40)
+  })
   it('放置校验计入火源与古石地标间距', () => {
     const s = withCampfire()
     expect(canPlaceAt(s.world, { x: 20, y: 20 }, s.world.campfires[0]!.pos)).toBe(false)
