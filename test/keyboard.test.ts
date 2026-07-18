@@ -33,4 +33,11 @@ describe('Sim 固定步长', () => {
     sim.advance(5, input) // 钳到 0.25s => 至多 ~8 步
     expect(sim.state.player.pos.x).toBeLessThan(20 + 4 * 0.3)
   })
+  it('interact 边沿只投递给首个 sim 步', () => {
+    const sim = new Sim(initialSim(20, 20))
+    sim.advance(3 / 30, { moveX: 1, moveY: 0, interact: true })
+    // 第1步边沿进入采集，第2步移动取消采集回到行走，
+    // 第3步若边沿泄漏到后续步会再次进入采集——期望仍为行走
+    expect(sim.state.player.action).toBe('walking')
+  })
 })
