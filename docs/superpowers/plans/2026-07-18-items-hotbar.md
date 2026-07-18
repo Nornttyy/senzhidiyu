@@ -1,5 +1,15 @@
 # 物品系统与交互重做 实现计划
 
+> **现状适配补丁（2026-07-18，写于挥砍三件套/手作质感层/菜单三件合入之后）**
+> 本计划各代码块按其编写时的基线书写，执行时以下现实差异**优先于**计划原文：
+> 1. **双通道采集保留**：`PlayerState.action ∈ idle|walking` + 正交 `gathering` 布尔与 `gatherT`；命中判定 `prevPlayer.gathering && player.gathering && gatherT 跨 hitAt`（回绕保护）原样保留，Task 2 只改结算内容（charges/破坏/掉落），不动判定。
+> 2. **held||edge 语义保留**：`Sim.advance` 的上升沿入队/edgeUsable 逻辑与 `IntentInput.aimFacing` 原样保留；新增字段（place/aim/selectSlot）叠加而非替换；`craft` 字段删除改动作队列不变。
+> 3. **main.ts 以当前版为基**：Menu（DOM）/paused 门/Handmade 层/boil 位移滤镜/noink 开关/`LostFx(app, world, boilFilters)` 三参签名/ESC 监听全部保留；只替换输入路由、事件 switch、worldView/ui 新接口、灯表分档三处。菜单开启时（paused）不投递任何 sim 输入、不响应 E 背包。
+> 4. **keyboard.ts 扩展而非重写**：保留 interactHeld/aimFacing/lastPointerX/clear()；KeyE 锁存改名背包开关（consumeBagToggle）；pointermove 补 y 形成 `mouse:{x,y}`；新增 place/数字/滚轮锁存并并入 clear()。
+> 5. **连砍契约测试移植**：world.test 中"边走边砍结算/出界无收益/连砍两循环两木"等 8ad5812 契约用例改写为新语义（两循环=两次 nodeHit 或 charges-2），不得删除覆盖面。
+> 6. **菜单文案同步**：menu.ts help 视图与 onStart toast 的"E 合成/放置"改为"E 背包 · 右键 放置"（并入 Task 7）。
+> 7. Task 2 的 `chop()` 辅助需先核对当前 stepPlayer 单循环完结语义（已开始的循环松开后自然走完）再定首 tick 边沿写法。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 按 `docs/superpowers/specs/2026-07-18-items-hotbar-design.md` 落地 Minecraft 式物品系统：36 格库存与热键栏、背包合成、开局斧头、血量、资源分档挖完才掉、倒塌/碎裂动画、树苗种植闭环、白圈+鼠标残影+右键放置。
