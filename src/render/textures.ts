@@ -18,6 +18,9 @@ export async function loadTextures(renderer: Renderer): Promise<GameTextures> {
   let seeker: Texture
   try {
     seeker = await Assets.load<Texture>('./assets/seeker.png')
+    // 立绘原图按 ~10:1 缩小显示，无 mipmap 时呼吸缩放/亚像素移动都会
+    // 引发采样抖动（角色持续发晃）；置标志后 GL 上传时自动生成 mip 链
+    seeker.source.autoGenerateMipmaps = true
   } catch {
     console.warn('seeker.png 缺失，使用程序占位')
     seeker = placeholderSeeker(renderer)
