@@ -28,8 +28,6 @@ export const CONFIG = {
     speed: 0.6, stareRange: 8, stareExit: 9, dissolveRange: 6,
     fadeDur: 1.2, goneDur: 6, fadeInDur: 1, respawnMinDist: 12,
     ringMin: 10, ringMax: 18, spawn: { x: 32, y: 32 },
-    // 幽光表现：加法混合下中灰身躯加光量太低，远处退化成淡烟——双重加法提亮 + 脉动光晕
-    glowRadiusM: 1.6, glowAlpha: 0.2, glowPulse: 0.08, glowPulseHz: 0.45,
   },
   landmark: { x: 20, y: 19 }, // 出生点古石(不发光不交互)
   inv: { slots: 36, hotbar: 9, stackMax: 99 },
