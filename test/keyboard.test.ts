@@ -48,6 +48,21 @@ describe('Sim 固定步长', () => {
     sim.advance(0.03, { moveX: 0, moveY: 0, interact: false, craft: false, aimFacing: 0 as const }) // 此帧才步进
     expect(sim.state.player.gathering).toBe(true) // 点按边沿被缓存,起手一个完整循环
   })
+  it('循环中点按排队到边界续一循环（连点不吞刀）', () => {
+    const sim = new Sim(initialSim(20, 20))
+    const off = { moveX: 0, moveY: 0, interact: false, craft: false, aimFacing: 0 } as const
+    const tap = { ...off, interact: true }
+    sim.advance(1 / 30, tap)           // 点按1:起手
+    sim.advance(1 / 30, off)
+    for (let i = 0; i < 15; i++) sim.advance(1 / 30, off) // 推进到循环中段(~0.57s)
+    sim.advance(1 / 30, tap)           // 点按2:落在循环中段,应排队
+    sim.advance(1 / 30, off)
+    for (let i = 0; i < 20; i++) sim.advance(1 / 30, off) // 跨过 1.2s 边界
+    expect(sim.state.player.gathering).toBe(true) // 排队的点按在边界续了第二循环
+    for (let i = 0; i < 40; i++) sim.advance(1 / 30, off) // 第二循环打完
+    expect(sim.state.player.gathering).toBe(false) // 无更多输入,自然收尾
+  })
+
   it('held 跨多步批次在循环边界无缝衔接', () => {
     const sim = new Sim(initialSim(20, 20))
     const held = { moveX: 0, moveY: 0, interact: true, craft: false, aimFacing: 0 as const } as const
