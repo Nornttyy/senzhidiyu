@@ -1,6 +1,8 @@
 import { CONFIG } from '../config'
 import type { PlayerAction } from '../sim/types'
 
+const EPS = 1e-8 // 帧时间累积漂移容差：阈值跨越判定统一使用
+
 export interface AnimSample {
   action: PlayerAction
   facing: 1 | -1
@@ -34,9 +36,7 @@ export function animate(s: AnimSample): { transform: SpriteTransform; events: An
     const prevPhase = s.prevActionT * rate
     t.offsetYPx = -CONFIG.anim.bobAmpPx * Math.abs(Math.sin(Math.PI * phase))
     t.rotation = CONFIG.anim.lean * s.facing
-    // Use small epsilon to handle floating point accumulation in phase crossing detection
-    const eps = 1e-8
-    if (Math.floor(phase + eps) > Math.floor(prevPhase + eps)) events.push('footstep')
+    if (Math.floor(phase + EPS) > Math.floor(prevPhase + EPS)) events.push('footstep')
   } else if (s.action === 'gathering') {
     const g = CONFIG.gather
     let angle: number
@@ -48,7 +48,7 @@ export function animate(s: AnimSample): { transform: SpriteTransform; events: An
       angle = g.chopAngle * (1 - easeInOutQuad(Math.min(1, (s.gatherT - g.hitAt) / (g.duration - g.hitAt))))
     }
     t.rotation = angle * s.facing
-    if (s.prevGatherT < g.hitAt && s.gatherT >= g.hitAt) events.push('gatherHit')
+    if (s.prevGatherT + EPS < g.hitAt && s.gatherT + EPS >= g.hitAt) events.push('gatherHit')
   } else {
     // idle：从行走停下的 stopRebound 秒内，前倾角衰减回正
     const k = Math.min(1, s.actionT / CONFIG.anim.stopRebound)

@@ -71,6 +71,14 @@ describe('采集', () => {
     const r = animate(base({ action: 'gathering', facing: -1, gatherT: g.hitAt, prevGatherT: g.hitAt - 0.01, actionT: g.hitAt, prevActionT: g.hitAt - 0.01 }))
     expect(r.transform.rotation).toBeCloseTo(-g.chopAngle, 3)
   })
+  it('命中判定容忍帧时间累积欠差', () => {
+    // 累积 dt 时 gatherT 可能落在 hitAt 下方 1e-9 级别，仍应命中且仅一次
+    const just = g.hitAt - 1e-9
+    const r = at(just, just - 0.01)
+    expect(r.events).toEqual(['gatherHit'])
+    const next = at(just + 0.01, just)
+    expect(next.events).toEqual([])
+  })
 })
 
 describe('停止回弹', () => {
