@@ -1,10 +1,10 @@
 import { CONFIG } from '../config'
-import { addItem, takeAt } from './inventory'
+import { addItem, canAfford, moveSlot, payCost, takeAt } from './inventory'
 import { stepPhantom } from './phantom'
 import { stepPlayer } from './player'
 import { nextRand } from './rand'
 import { clamp, dist } from './vec'
-import type { DropEntity, IntentInput, ItemKind, ResourceNode, SimEvent, SimState, Vec2, WorldState } from './types'
+import type { DropEntity, IntentInput, ItemKind, ResourceNode, SimAction, SimEvent, SimState, Vec2, WorldState } from './types'
 
 const EPS = 1e-8 // 与 characterAnimator 同源的帧时间漂移容差
 
@@ -46,7 +46,13 @@ export function serenityRate(inZone: boolean, hasLantern: boolean, staring: bool
   return base + (staring ? S.stareDrain : 0)
 }
 
-export function stepWorld(s: SimState, input: IntentInput, dt: number): { state: SimState; events: SimEvent[] } {
+/** 预留伤害入口（本切片无伤害源） */
+export const applyDamage = (w: WorldState, n: number): WorldState =>
+  ({ ...w, hp: clamp(w.hp - n, 0, CONFIG.hp.max) })
+
+export function stepWorld(
+  s: SimState, input: IntentInput, dt: number, actions: readonly SimAction[] = [],
+): { state: SimState; events: SimEvent[] } {
   const events: SimEvent[] = []
   const prevPlayer = s.player
   const player = stepPlayer(prevPlayer, input, dt)
@@ -163,6 +169,29 @@ export function stepWorld(s: SimState, input: IntentInput, dt: number): { state:
       }
       world = { ...world, nodes, plantings: world.plantings.filter((p) => !ready.includes(p)), nextId }
     }
+  }
+
+  // 背包动作队列（UI 权威路径）：搬格/合成
+  for (const a of actions) {
+    if (a.type === 'move') {
+      world = { ...world, slots: moveSlot(world.slots, a.from, a.to) }
+    } else {
+      const r = CONFIG.recipes[a.recipe]
+      if (r && canAfford(world.slots, r.cost)) {
+        const paid = payCost(world.slots, r.cost)
+        const add = addItem(paid, r.out, r.outCount)
+        if (add.leftover === 0) { // 产出无处安放则整体不执行
+          world = { ...world, slots: add.slots }
+          events.push({ type: 'crafted', recipe: a.recipe })
+        }
+      }
+    }
+  }
+
+  // 血量：篝火圈内回复（本切片无伤害源，applyDamage 为预留入口）
+  const inCampfire = dist(CONFIG.campfire, player.pos) <= CONFIG.light.campfireRadiusM
+  if (inCampfire && world.hp < CONFIG.hp.max) {
+    world = { ...world, hp: clamp(world.hp + CONFIG.hp.campfireRegen * dt, 0, CONFIG.hp.max) }
   }
 
   // 幻影

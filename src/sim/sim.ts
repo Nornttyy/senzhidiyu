@@ -1,6 +1,6 @@
 import { CONFIG } from '../config'
 import { stepWorld } from './world'
-import type { IntentInput, SimEvent, SimState } from './types'
+import type { IntentInput, SimAction, SimEvent, SimState } from './types'
 
 export class Sim {
   readonly dt = 1 / 30
@@ -9,6 +9,7 @@ export class Sim {
   private acc = 0
   private pendingInteract = false
   private pendingPlace = false
+  private actions: SimAction[] = []
   private events: SimEvent[] = []
 
   constructor(initial: SimState) {
@@ -36,7 +37,9 @@ export class Sim {
         interact: input.interact || (edgeUsable && this.pendingInteract),
         place: first ? this.pendingPlace : false, // 放置维持纯边沿
       }
-      const r = stepWorld(this.state, inp, this.dt)
+      const acts = first ? this.actions : []
+      if (first && this.actions.length) this.actions = []
+      const r = stepWorld(this.state, inp, this.dt, acts)
       this.state = r.state
       this.events.push(...r.events)
       if (edgeUsable) this.pendingInteract = false
@@ -45,6 +48,9 @@ export class Sim {
   }
 
   alpha(): number { return this.acc / this.dt }
+
+  /** UI 权威动作（搬格/合成）：缓冲到下个实际步进帧一次性交付 */
+  queueAction(a: SimAction): void { this.actions.push(a) }
 
   /** 失焦时丢弃已缓存未步进的输入边沿，避免回焦后触发陈旧操作 */
   clearPendingEdges(): void {
