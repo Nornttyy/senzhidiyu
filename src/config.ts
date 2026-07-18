@@ -14,13 +14,15 @@ export const CONFIG = {
     breathAmp: 0.015, breathPeriod: 2.5,
     bobAmpPx: 5, strideM: 2, lean: 4 * DEG, stopRebound: 0.15,
   },
+  clock: { dayS: 240, duskS: 60, nightS: 180, startAtS: 30, dawnRampS: 12, duskRespawnS: 10 },
+  fire: { torchBurnS: 90, torchMinM: 0.6, campfireBurnS: 120, campfireEmberM: 1.2, feedWood: 1, feedRangeM: 2 },
   light: {
-    lanternRadiusM: 3.5, flickerAmp: 0.06, darkness: 0.94,
-    campfireRadiusM: 6, postRadiusM: 5,
+    torchHeldM: 2.8, torchPlantedM: 2.2, campfireM: 5, postRadiusM: 5,
+    flickerAmp: 0.06, darkness: 0.94, dayDarkness: 0.06,
   },
   serenity: {
     max: 100, initial: 100, lostBelow: 30, clearAt: 40,
-    zoneRegen: 5, lanternDrain: -0.5, darkDrain: -3, stareDrain: -2, // 每秒
+    zoneRegen: 5, dayRegen: 1.5, darkDrain: -3, stareDrain: -2, // 每秒
   },
   phantom: {
     speed: 0.6, stareRange: 8, stareExit: 9, dissolveRange: 6,
@@ -29,15 +31,17 @@ export const CONFIG = {
     // 幽光表现：加法混合下中灰身躯加光量太低，远处退化成淡烟——双重加法提亮 + 脉动光晕
     glowRadiusM: 1.6, glowAlpha: 0.2, glowPulse: 0.08, glowPulseHz: 0.45,
   },
-  campfire: { x: 20, y: 19 },
+  landmark: { x: 20, y: 19 }, // 出生点古石(不发光不交互)
   inv: { slots: 36, hotbar: 9, stackMax: 99 },
   drops: { pickupRadiusM: 1.0, pickupDelayS: 0.5, scatterMin: 1.5, scatterMax: 3, dragPerS: 6, itemH: 0.45 },
   place: { rangeM: 3, spacingM: 0.8, edgeMarginM: 1 },
   growth: { durS: 90 },
-  hp: { max: 100, campfireRegen: 10 },
+  hp: { max: 100, fireRegen: 10 },
   saplingChance: 0.35,
   recipes: [
     { name: '提灯柱', out: 'lanternPost', outCount: 1, cost: [{ kind: 'wood', count: 10 }, { kind: 'fluorite', count: 5 }] },
+    { name: '火把', out: 'torch', outCount: 2, cost: [{ kind: 'wood', count: 2 }] },
+    { name: '篝火', out: 'campfire', outCount: 1, cost: [{ kind: 'wood', count: 8 }, { kind: 'fluorite', count: 2 }] },
   ],
   tiers: {
     tree: [

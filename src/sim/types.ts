@@ -14,7 +14,7 @@ export interface PlayerState {
   readonly pendingFacingT: number   // 反向输入累计秒数（翻转防抖）
 }
 
-export type ItemKind = 'axe' | 'wood' | 'fluorite' | 'sapling' | 'lanternPost'
+export type ItemKind = 'axe' | 'wood' | 'fluorite' | 'sapling' | 'lanternPost' | 'torch' | 'campfire'
 export interface ItemStack { readonly kind: ItemKind; readonly count: number }
 
 export type NodeKind = 'tree' | 'ore'
@@ -32,6 +32,18 @@ export interface DropEntity {
   readonly pos: Vec2
   readonly vel: Vec2
   readonly bornAt: number // 世界时间，供拾取延迟
+}
+
+export interface PlantedTorch {
+  readonly id: number
+  readonly pos: Vec2
+  readonly litAt: number // 世界时间,燃尽判定与半径衰减
+}
+
+export interface Campfire {
+  readonly id: number
+  readonly pos: Vec2
+  readonly fedAt: number // 最近一次点燃/添柴时刻
 }
 
 export interface Planting {
@@ -52,6 +64,9 @@ export interface PhantomState {
 export interface WorldState {
   readonly nodes: readonly ResourceNode[]
   readonly posts: readonly Vec2[]
+  readonly campfires: readonly Campfire[]
+  readonly plantedTorches: readonly PlantedTorch[]
+  readonly clock: number // 昼夜时钟秒(模一天长度)
   readonly plantings: readonly Planting[]
   readonly drops: readonly DropEntity[]
   readonly phantom: PhantomState
@@ -94,6 +109,12 @@ export type SimEvent =
   | { readonly type: 'grown'; readonly pos: Vec2; readonly nodeId: number }
   | { readonly type: 'crafted'; readonly recipe: number }
   | { readonly type: 'postPlaced'; readonly pos: Vec2; readonly index: number }
+  | { readonly type: 'phase'; readonly phase: import('./clock').DayPhase }
+  | { readonly type: 'torchPlanted'; readonly pos: Vec2 }
+  | { readonly type: 'torchBurnt'; readonly pos: Vec2 }
+  | { readonly type: 'campfirePlaced'; readonly pos: Vec2 }
+  | { readonly type: 'campfireFed'; readonly pos: Vec2 }
+  | { readonly type: 'campfireEmber'; readonly pos: Vec2 }
   | { readonly type: 'phantomSigh'; readonly pos: Vec2 }
   | { readonly type: 'lostEnter' }
   | { readonly type: 'lostExit' }
@@ -107,9 +128,13 @@ export function initialWorld(seed: number): WorldState {
   }))
   const slots: (ItemStack | null)[] = Array(CONFIG.inv.slots).fill(null)
   slots[0] = { kind: 'axe', count: 1 }
+  slots[1] = { kind: 'torch', count: 2 } // 开局仁慈:保证第一夜
   return {
     nodes: [...trees, ...ores],
     posts: [],
+    campfires: [],
+    plantedTorches: [],
+    clock: CONFIG.clock.startAtS,
     plantings: [],
     drops: [],
     phantom: { pos: CONFIG.phantom.spawn, mode: 'wander', modeT: 0, alpha: 1, target: CONFIG.phantom.spawn },
