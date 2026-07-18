@@ -49,8 +49,9 @@ export function stepWorld(s: SimState, input: IntentInput, dt: number): { state:
   const player = stepPlayer(prevPlayer, input, dt)
   let world = s.world
 
-  // 采集收益：同一采集循环内 gatherT 跨越 hitAt 的 tick 结算（打断则无）
-  const crossedHit = prevPlayer.action === 'gathering' && player.action === 'gathering'
+  // 采集收益：gatherT 跨越 hitAt 的 tick 结算，条件为命中时刻玩家在节点交互半径内
+  // 双通道后判定 gathering 布尔；无缝衔接回绕 tick（prev 1.19→cur 0.02）天然不满足跨越，无重复结算
+  const crossedHit = prevPlayer.gathering && player.gathering
     && prevPlayer.gatherT + EPS < CONFIG.gather.hitAt && player.gatherT + EPS >= CONFIG.gather.hitAt
   if (crossedHit) {
     const idx = nearestNodeIdx(world.nodes, player.pos, CONFIG.gather.rangeM)

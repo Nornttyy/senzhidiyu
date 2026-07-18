@@ -6,7 +6,7 @@ import { nearestNodeIdx, stepWorld } from '../src/sim/world'
 import type { IntentInput, SimEvent, SimState } from '../src/sim/types'
 
 const DT = 1 / 30
-const I = (o: Partial<IntentInput> = {}): IntentInput => ({ moveX: 0, moveY: 0, interact: false, craft: false, ...o })
+const I = (o: Partial<IntentInput> = {}): IntentInput => ({ moveX: 0, moveY: 0, interact: false, craft: false, aimFacing: 0 as const, ...o })
 
 function runTicks(s: SimState, inp: IntentInput, n: number): { state: SimState; events: SimEvent[] } {
   const events: SimEvent[] = []
@@ -72,10 +72,27 @@ describe('采集收益', () => {
     expect(events.filter((e) => e.type === 'harvest')).toHaveLength(0)
     expect(state.world.inventory.wood).toBe(0)
   })
-  it('采集被移动打断不结算', () => {
+  it('边走边砍不打断：命中时刻仍在范围内则照常结算', () => {
     const first = stepWorld(initialSim(12.5, 14.1), I({ interact: true }), DT)
-    const r = runTicks(first.state, I({ moveX: 1 }), 45) // 立即走动打断
-    expect(r.events.filter((e) => e.type === 'harvest')).toHaveLength(0)
+    // 按住并缓速移动,命中(0.45s)时仍在 1.6m 范围内
+    const r = runTicks(first.state, I({ moveX: 1, interact: true }), 14)
+    expect(r.events.filter((e) => e.type === 'harvest')).toHaveLength(1)
+  })
+  it('命中时刻已走出交互范围则无收益', () => {
+    const first = stepWorld(initialSim(12.5, 14.1), I({ interact: true }), DT)
+    // 全程按住移动:0.45s 命中前已离开范围(减速 2.4m/s × 0.43s ≈ 1.03m,起点距树需临界)——
+    // 用远离方向确保出界:向左上撤离
+    const r = runTicks(first.state, I({ moveX: -1, moveY: -1, interact: true }), 45)
+    const hits = r.events.filter((e) => e.type === 'harvest')
+    expect(hits.length).toBeLessThanOrEqual(1) // 首循环可能压线,后续循环必然出界
+    const r2 = runTicks(r.state, I({ moveX: -1, moveY: -1, interact: true }), 36)
+    expect(r2.events.filter((e) => e.type === 'harvest')).toHaveLength(0)
+  })
+  it('长按连砍:靠树按住两循环得两木', () => {
+    const first = stepWorld(initialSim(12.5, 14.1), I({ interact: true }), DT)
+    const r = runTicks(first.state, I({ interact: true }), 72) // 两循环
+    expect(r.events.filter((e) => e.type === 'harvest')).toHaveLength(2)
+    expect(r.state.world.inventory.wood).toBe(2)
   })
   it('矿采集得 fluorite', () => {
     const { state, events } = gatherOnce(initialSim(7.5, 17.6)) // 矿0 (7.5,16.5) 南侧 1.1m
