@@ -3,11 +3,8 @@ import { CONFIG } from '../src/config'
 import { Sim } from '../src/sim/sim'
 import { initialSim } from '../src/sim/types'
 import { canPlaceAt, stepWorld } from '../src/sim/world'
-import type { IntentInput, SimState } from '../src/sim/types'
-
-const DT = 1 / 30
-const I = (o: Partial<IntentInput> = {}): IntentInput =>
-  ({ moveX: 0, moveY: 0, interact: false, place: false, aim: { x: 0, y: 0 }, selectSlot: -1, aimFacing: 0 as const, ...o })
+import { DT, I } from './helpers'
+import type { SimState } from '../src/sim/types'
 const withItem = (s: SimState, kind: 'sapling' | 'lanternPost', n = 1): SimState => ({
   ...s,
   world: { ...s.world, slots: s.world.slots.map((x, i) => (i === 0 ? { kind, count: n } : x)), selected: 0 },

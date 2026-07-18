@@ -64,10 +64,11 @@ export function payCost(slots: Slots, cost: Cost): (ItemStack | null)[] {
   return out
 }
 
-/** 同类可叠则灌注到上限，否则交换 */
+/** 同类可叠则灌注到上限，否则交换；越界下标不动槽组（防 out[-1] 隐性删物） */
 export function moveSlot(slots: Slots, from: number, to: number): (ItemStack | null)[] {
   const out = [...slots]
   if (from === to) return out
+  if (from < 0 || from >= out.length || to < 0 || to >= out.length) return out
   const a = out[from] ?? null
   const b = out[to] ?? null
   if (a && b && a.kind === b.kind && stackable(a.kind) && b.count < MAX) {

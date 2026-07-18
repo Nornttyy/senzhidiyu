@@ -4,13 +4,8 @@ import { countOf } from '../src/sim/inventory'
 import { Sim } from '../src/sim/sim'
 import { initialSim } from '../src/sim/types'
 import { applyDamage, stepWorld } from '../src/sim/world'
-import type { IntentInput, ItemStack, SimState } from '../src/sim/types'
-
-const DT = 1 / 30
-const I = (): IntentInput =>
-  ({ moveX: 0, moveY: 0, interact: false, place: false, aim: { x: 0, y: 0 }, selectSlot: -1, aimFacing: 0 })
-const withSlots = (s: SimState, fill: (i: number) => ItemStack | null): SimState =>
-  ({ ...s, world: { ...s.world, slots: s.world.slots.map((_, i) => fill(i)) } })
+import { DT, I, withSlots } from './helpers'
+import type { SimState } from '../src/sim/types'
 
 describe('craft 动作', () => {
   const rich = (s: SimState) => withSlots(s, (i) =>
@@ -26,17 +21,27 @@ describe('craft 动作', () => {
     expect(countOf(r.state.world.slots, 'lanternPost')).toBe(0)
     expect(r.events.filter((e) => e.type === 'crafted')).toHaveLength(0)
   })
-  it('产出无处安放则整体不执行不扣费', () => {
+  it('产出无处安放则整体不执行不扣费，并发 invFull 提示', () => {
     // 从大叠中扣费不清格：扣完 slots 仍全占，产出无处放
     const full = withSlots(initialSim(5, 5), (i) =>
       i === 0 ? { kind: 'wood', count: 99 } : { kind: 'fluorite', count: 99 })
     const r = stepWorld(full, I(), DT, [{ type: 'craft', recipe: 0 }])
     expect(countOf(r.state.world.slots, 'wood')).toBe(99)
     expect(countOf(r.state.world.slots, 'lanternPost')).toBe(0)
+    expect(r.events.some((e) => e.type === 'invFull')).toBe(true)
   })
 })
 
 describe('move 动作与队列', () => {
+  it('clearPendingEdges 丢弃排队中的动作（blur/开合背包）', () => {
+    const sim = new Sim(withSlots(initialSim(5, 5), (i) => (i === 0 ? { kind: 'wood', count: 3 } : null)))
+    sim.queueAction({ type: 'move', from: 0, to: 10 })
+    sim.advance(0.01, I()) // 未步进
+    sim.clearPendingEdges()
+    sim.advance(0.03, I())
+    expect(sim.state.world.slots[0]).toEqual({ kind: 'wood', count: 3 })
+    expect(sim.state.world.slots[10]).toBeNull()
+  })
   it('Sim.queueAction 缓冲到实际步进帧一次性交付', () => {
     const sim = new Sim(withSlots(initialSim(5, 5), (i) => (i === 0 ? { kind: 'wood', count: 3 } : null)))
     sim.queueAction({ type: 'move', from: 0, to: 10 })

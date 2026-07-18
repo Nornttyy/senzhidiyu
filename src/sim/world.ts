@@ -55,14 +55,17 @@ export function stepWorld(
 ): { state: SimState; events: SimEvent[] } {
   const events: SimEvent[] = []
   const prevPlayer = s.player
-  const player = stepPlayer(prevPlayer, input, dt)
   let world = s.world
   let seed = world.seed
 
-  // 选中热键格（先于命中判定，工具门槛用最新选中）
+  // 选中热键格（先于玩家步进，挥砍门槛用最新选中）
   if (input.selectSlot >= 0 && input.selectSlot < CONFIG.inv.hotbar && input.selectSlot !== world.selected) {
     world = { ...world, selected: input.selectSlot }
   }
+
+  // 非斧头不起手：连挥砍姿态/敲击反馈都不给，避免"看着在砍却没效果"的假反馈（终审#2）
+  const axeHeld = selectedKind(world) === 'axe'
+  const player = stepPlayer(prevPlayer, axeHeld ? input : { ...input, interact: false }, dt)
 
   // 挥砍命中：gatherT 跨越 hitAt 的 tick 结算，命中时刻需在交互半径内且手持斧头。
   // 双通道判定 gathering 布尔；无缝衔接回绕 tick（prev 1.19→cur 0.02）天然不满足跨越，无重复结算。
@@ -183,6 +186,9 @@ export function stepWorld(
         if (add.leftover === 0) { // 产出无处安放则整体不执行
           world = { ...world, slots: add.slots }
           events.push({ type: 'crafted', recipe: a.recipe })
+        } else if (s.time - world.invFullAt > 3) { // 静默失败会显得按钮坏了（终审#5）
+          events.push({ type: 'invFull' })
+          world = { ...world, invFullAt: s.time }
         }
       }
     }

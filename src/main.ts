@@ -136,23 +136,23 @@ async function main(): Promise<void> {
     if (!paused) {
       if (kb.consumeBagToggle()) {
         ui.toggleBag()
-        sim.clearPendingEdges() // 开合背包丢弃陈旧点击
+        sim.clearPendingEdges() // 开合背包丢弃陈旧点击/排队动作
       }
       const clickL = kb.consumeInteract()
       const clickR = kb.consumePlace()
-      const overUI = ui.hitTest(kb.mouse.x, kb.mouse.y)
-      if (clickL && (ui.bagOpen || overUI)) ui.click(kb.mouse.x, kb.mouse.y)
+      // 仅背包开启时点击归 UI（设计§8）；热键栏悬停不吞挥砍（终审#1）
+      if (clickL && ui.bagOpen) ui.click(kb.mouse.x, kb.mouse.y)
       const digit = kb.consumeSelect()
       const wheel = kb.consumeWheel()
       const selNow = sim.state.world.selected
-      const selectSlot = digit >= 0
+      // 背包开启时不换热键格（终审#6），锁存仍被消费防积压
+      const selectSlot = ui.bagOpen ? -1 : digit >= 0
         ? digit
         : wheel !== 0 ? (selNow + wheel + CONFIG.inv.hotbar) % CONFIG.inv.hotbar : -1
-      const uiBlocked = ui.bagOpen || overUI
       sim.advance(realDt, {
         ...kb.intent(),
-        interact: !uiBlocked && (kb.interactHeld() || clickL), // held 连砍 + 边沿缓存点按
-        place: !uiBlocked && clickR,
+        interact: !ui.bagOpen && (kb.interactHeld() || clickL), // held 连砍 + 边沿缓存点按
+        place: !ui.bagOpen && clickR,
         aim,
         selectSlot,
         aimFacing: kb.aimFacing(window.innerWidth), // 角色恒居屏幕中心,屏幕中线即角色位置

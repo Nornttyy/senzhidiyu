@@ -71,6 +71,20 @@ describe('Sim 固定步长', () => {
     expect(sim.state.player.gathering).toBe(true)
     expect(sim.state.time).toBeGreaterThan(CONFIG.gather.duration)
   })
+  it('selectSlot 边沿缓存到实际步进帧（无步帧不丢选格）', () => {
+    const sim = new Sim(initialSim(20, 20))
+    sim.advance(0.01, { moveX: 0, moveY: 0, interact: false, place: false, aim: { x: 0, y: 0 }, selectSlot: 4, aimFacing: 0 as const }) // 累积不足一步
+    expect(sim.state.world.selected).toBe(0)
+    sim.advance(0.03, { moveX: 0, moveY: 0, interact: false, place: false, aim: { x: 0, y: 0 }, selectSlot: -1, aimFacing: 0 as const })
+    expect(sim.state.world.selected).toBe(4)
+  })
+  it('clearPendingEdges 同时丢弃缓存的选格', () => {
+    const sim = new Sim(initialSim(20, 20))
+    sim.advance(0.01, { moveX: 0, moveY: 0, interact: false, place: false, aim: { x: 0, y: 0 }, selectSlot: 4, aimFacing: 0 as const })
+    sim.clearPendingEdges()
+    sim.advance(0.03, { moveX: 0, moveY: 0, interact: false, place: false, aim: { x: 0, y: 0 }, selectSlot: -1, aimFacing: 0 as const })
+    expect(sim.state.world.selected).toBe(0)
+  })
   it('clearPendingEdges 丢弃已缓存未步进的边沿（blur 场景）', () => {
     const sim = new Sim(initialSim(20, 20))
     sim.advance(0.01, { moveX: 0, moveY: 0, interact: true, place: true, aim: { x: 0, y: 0 }, selectSlot: -1, aimFacing: 0 as const }) // 缓存但未步进

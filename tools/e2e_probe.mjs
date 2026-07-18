@@ -84,30 +84,32 @@ await walkUntil(['KeyD'], `(() => window.__whispers.sim.state.world.drops.length
 s = await state()
 assert(s.wood >= 4, `掉落木材已拾取 (wood=${s.wood})`)
 
-// 5) 注入配方材料并经动作队列合成提灯柱
+// 5) 注入配方材料，开背包点真实"合成"按钮（终审#7：走用户路径而非 queueAction 直灌）
 await page.evaluate(() => {
   const sim = window.__whispers.sim
   const slots = [...sim.state.world.slots]
   slots[1] = { kind: 'wood', count: 10 }
   slots[2] = { kind: 'fluorite', count: 5 }
   sim.state = { ...sim.state, world: { ...sim.state.world, slots } }
-  sim.queueAction({ type: 'craft', recipe: 0 })
 })
-await page.waitForTimeout(300)
+await page.keyboard.press('KeyE')
+await page.waitForTimeout(400)
+// 背包面板居中(494x350)，配方按钮位于面板内 (16, 40+4*52+24)，点按钮左段
+await page.mouse.click(640 - 247 + 16 + 40, 360 - 175 + 272 + 15)
+await page.waitForTimeout(400)
 s = await state()
-assert(s.post >= 1, `合成得提灯柱 (post=${s.post})`)
+assert(s.post >= 1, `真实按钮点击合成得提灯柱 (post=${s.post})`)
+await page.keyboard.press('KeyE') // 关背包
+await page.waitForTimeout(200)
 
-// 6) 提灯柱移入热键 4 号格，数字键选中，右键在白圈内放置
-await page.evaluate(() => {
-  const sim = window.__whispers.sim
-  const idx = sim.state.world.slots.findIndex((x) => x && x.kind === 'lanternPost')
-  if (idx !== 3) sim.queueAction({ type: 'move', from: idx, to: 3 })
-})
-await page.waitForTimeout(200)
-await page.keyboard.press('Digit4')
+// 6) 找到提灯柱所在热键格（扣费清格后产出落首空格，位置随拾取历史浮动），数字键选中，右键放置
+const postIdx = await page.evaluate(() =>
+  window.__whispers.sim.state.world.slots.findIndex((x) => x && x.kind === 'lanternPost'))
+assert(postIdx >= 0 && postIdx < 9, `提灯柱落在热键区 (idx=${postIdx})`)
+await page.keyboard.press(`Digit${postIdx + 1}`)
 await page.waitForTimeout(200)
 s = await state()
-assert(s.selected === 3, `数字键选中 4 号格 (selected=${s.selected})`)
+assert(s.selected === postIdx, `数字键选中提灯柱格 (selected=${s.selected})`)
 const target = await page.evaluate(() => {
   const p = window.__whispers.sim.state.player.pos
   return { x: p.x + 1.6, y: p.y }

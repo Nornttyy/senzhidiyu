@@ -51,6 +51,13 @@ describe('takeAt / cost', () => {
 })
 
 describe('moveSlot', () => {
+  it('越界下标不动槽组（防负一删物）', () => {
+    const s = empty()
+    s[3] = { kind: 'wood', count: 5 }
+    expect(moveSlot(s, -1, 3)[3]).toEqual({ kind: 'wood', count: 5 })
+    expect(moveSlot(s, 3, 99)[3]).toEqual({ kind: 'wood', count: 5 })
+    expect(moveSlot(s, 99, 3)[3]).toEqual({ kind: 'wood', count: 5 })
+  })
   it('同类合并到上限，异类交换', () => {
     let s = empty()
     s[0] = { kind: 'wood', count: 60 }

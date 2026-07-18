@@ -4,11 +4,8 @@ import { countOf } from '../src/sim/inventory'
 import { Sim } from '../src/sim/sim'
 import { initialSim } from '../src/sim/types'
 import { nearestNodeIdx, stepWorld } from '../src/sim/world'
+import { DT, I } from './helpers'
 import type { IntentInput, ItemKind, SimEvent, SimState } from '../src/sim/types'
-
-const DT = 1 / 30
-const I = (o: Partial<IntentInput> = {}): IntentInput =>
-  ({ moveX: 0, moveY: 0, interact: false, place: false, aim: { x: 0, y: 0 }, selectSlot: -1, aimFacing: 0 as const, ...o })
 
 function runTicks(s: SimState, inp: IntentInput, n: number): { state: SimState; events: SimEvent[] } {
   const events: SimEvent[] = []
@@ -69,8 +66,11 @@ describe('命中与破坏（挖完才掉）', () => {
     expect(state.world.nodes[0]!.charges).toBe(CONFIG.tiers.tree[1]!.charges - 1)
     expect(state.world.slots.filter(Boolean)).toHaveLength(1) // 只有斧头
   })
-  it('非斧头选中不结算', () => {
-    const { state, events } = chop(withSel(nearTree(), null), 1)
+  it('非斧头选中不结算，也不进入挥砍姿态（无假反馈）', () => {
+    const start = withSel(nearTree(), null)
+    const first = stepWorld(start, I({ interact: true }), DT)
+    expect(first.state.player.gathering).toBe(false) // 空手点击不起手
+    const { state, events } = chop(withSel(nearTree(), 'sapling'), 1)
     expect(events.filter((e) => e.type === 'nodeHit')).toHaveLength(0)
     expect(state.world.nodes[0]!.charges).toBe(4)
   })

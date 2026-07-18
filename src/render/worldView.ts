@@ -49,7 +49,15 @@ export class WorldView {
     this.flame.zIndex = CONFIG.campfire.y * px + 1
     world.addChild(this.flame)
 
-    // 放置视觉：白色虚线圈 + 鼠标残影
+    // 放置视觉：白色虚线圈（几何恒定，预铺一次，每帧只挪位置——终审#9）+ 鼠标残影
+    const R = CONFIG.place.rangeM * px
+    for (let i = 0; i < 24; i += 2) {
+      const a0 = (i / 24) * Math.PI * 2
+      const a1 = ((i + 1) / 24) * Math.PI * 2
+      this.circle.moveTo(Math.cos(a0) * R, Math.sin(a0) * R)
+        .arc(0, 0, R, a0, a1)
+        .stroke({ color: 0xffffff, width: 2, alpha: 0.55 })
+    }
     this.circle.visible = false
     this.circle.zIndex = 1
     world.addChild(this.circle)
@@ -182,17 +190,10 @@ export class WorldView {
     this.circle.visible = view.showPlace
     this.ghost.visible = view.showPlace
     if (view.showPlace) {
-      const cx = lerp(prev.player.pos.x, cur.player.pos.x, alphaV) * px
-      const cy = lerp(prev.player.pos.y, cur.player.pos.y, alphaV) * px
-      const R = CONFIG.place.rangeM * px
-      this.circle.clear()
-      for (let i = 0; i < 24; i += 2) { // 虚线圆：24 段取偶
-        const a0 = (i / 24) * Math.PI * 2
-        const a1 = ((i + 1) / 24) * Math.PI * 2
-        this.circle.moveTo(cx + Math.cos(a0) * R, cy + Math.sin(a0) * R)
-          .arc(cx, cy, R, a0, a1)
-          .stroke({ color: 0xffffff, width: 2, alpha: 0.55 })
-      }
+      this.circle.position.set(
+        lerp(prev.player.pos.x, cur.player.pos.x, alphaV) * px,
+        lerp(prev.player.pos.y, cur.player.pos.y, alphaV) * px,
+      )
       const kind = selectedKind(cur.world)
       const tex = kind === 'sapling' ? this.tex.sapling : this.tex.post
       if (this.ghost.texture !== tex) {
