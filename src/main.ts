@@ -1,6 +1,7 @@
 import { Application } from 'pixi.js'
 import { CONFIG } from './config'
 import { Keyboard } from './input/keyboard'
+import { LightLayer } from './render/lightLayer'
 import { PlayerView } from './render/playerView'
 import { Scene } from './render/scene'
 import { loadTextures } from './render/textures'
@@ -23,6 +24,9 @@ async function main(): Promise<void> {
   const player = new PlayerView(textures.seeker)
   scene.world.addChild(player.sprite)
 
+  const light = new LightLayer(app)
+  app.stage.addChild(light.container)
+
   const noSinks = { footstep() {}, gatherHit() {} } // Task 7 接粒子与音效
   let elapsed = 0
 
@@ -36,6 +40,15 @@ async function main(): Promise<void> {
     const pp = sim.prev.player.pos
     const cp = sim.state.player.pos
     scene.follow(pp.x + (cp.x - pp.x) * alphaV, pp.y + (cp.y - pp.y) * alphaV)
+    const px = CONFIG.pxPerMeter
+    light.update(
+      [{
+        xPx: app.screen.width / 2,
+        yPx: app.screen.height / 2 - CONFIG.player.heightM * px * 0.45,
+        radiusPx: CONFIG.light.lanternRadiusM * px,
+      }],
+      elapsed,
+    )
   })
 }
 
