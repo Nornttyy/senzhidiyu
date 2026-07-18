@@ -1,4 +1,5 @@
 import { CONFIG } from '../config'
+import { stepPhantom } from './phantom'
 import { stepPlayer } from './player'
 import { clamp, dist } from './vec'
 import type { IntentInput, ResourceNode, SimEvent, SimState, Vec2 } from './types'
@@ -48,6 +49,11 @@ export function stepWorld(s: SimState, input: IntentInput, dt: number): { state:
       events.push({ type: 'harvest', kind: node.kind, nodeId: node.id, pos: node.pos, depleted: charges === 0 })
     }
   }
+
+  // 幻影
+  const phr = stepPhantom(world.phantom, player.pos, world.seed, dt)
+  world = { ...world, phantom: phr.phantom, seed: phr.seed }
+  if (phr.sigh) events.push({ type: 'phantomSigh', pos: phr.phantom.pos })
 
   // 安宁值结算与迷失滞回（本切片玩家恒带提灯，黑暗档为完备性保留）
   const inZone = dist(CONFIG.campfire, player.pos) <= CONFIG.light.campfireRadiusM
