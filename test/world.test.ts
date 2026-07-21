@@ -37,13 +37,16 @@ const withSel = (s: SimState, kind: ItemKind | null): SimState => ({
 
 describe('初始世界', () => {
   const w = initialSim(20, 20.8).world
-  it('分档节点：2小2中2大树 + 2小1大矿，id 唯一，nextId=9', () => {
-    const trees = w.nodes.filter((n) => n.kind === 'tree')
-    const ores = w.nodes.filter((n) => n.kind === 'ore')
+  it('出生地保留手摆的 9 个分档节点，外围区块另有程序资源', () => {
+    const fixed = w.nodes.filter((n) => typeof n.id === 'number')
+    const trees = fixed.filter((n) => n.kind === 'tree')
+    const ores = fixed.filter((n) => n.kind === 'ore')
     expect(trees.map((t) => t.tier).sort()).toEqual([0, 0, 1, 1, 2, 2])
     expect(ores.map((t) => t.tier).sort()).toEqual([0, 0, 1])
     expect(trees.every((n) => n.charges === CONFIG.tiers.tree[n.tier]!.charges)).toBe(true)
-    expect(new Set(w.nodes.map((n) => n.id)).size).toBe(9)
+    expect(fixed).toHaveLength(9)
+    expect(new Set(w.nodes.map((n) => n.id)).size).toBe(w.nodes.length)
+    expect(w.nodes.some((n) => typeof n.id === 'string')).toBe(true)
     expect(w.nextId).toBe(9)
   })
   it('开局：斧头在 0 号并选中、hp 满、无掉落物无种植', () => {
@@ -75,13 +78,14 @@ describe('命中与破坏（挖完才掉）', () => {
     expect(state.world.nodes[0]!.charges).toBe(4)
   })
   it('第 4 轮破坏：节点移除 + nodeBroken(kind/tier)', () => {
+    const startCount = nearTree().world.nodes.length
     const r3 = chop(nearTree(), 3)
     const r4 = chop(r3.state, 1)
     const broken = r4.events.filter((e) => e.type === 'nodeBroken')
     expect(broken).toHaveLength(1)
     expect(broken[0]).toMatchObject({ kind: 'tree', tier: 1, nodeId: 0 })
     expect(r4.state.world.nodes.find((n) => n.id === 0)).toBeUndefined()
-    expect(r4.state.world.nodes).toHaveLength(8)
+    expect(r4.state.world.nodes).toHaveLength(startCount - 1)
   })
   it('边走边砍不打断：命中时刻仍在范围内则照常结算（契约移植）', () => {
     const first = stepWorld(nearTree(), I({ interact: true }), DT)
@@ -133,15 +137,15 @@ describe('掉落物理与拾取', () => {
     const { state } = chop(nearTree(), 4)
     expect(woodTotal(state)).toBe(4)
   })
-  it('掉落物滑停且不出界；走过掉落堆全部吸入', () => {
+  it('掉落物滑停；走过掉落堆全部吸入', () => {
     let { state, events } = chop(nearTree(), 4)
     const settled = runTicks(state, I(), 30) // 1 秒滑停
     state = settled.state
     events = [...events, ...settled.events]
     for (const d of state.world.drops) {
       expect(Math.hypot(d.vel.x, d.vel.y)).toBeLessThan(0.05)
-      expect(d.pos.x).toBeGreaterThanOrEqual(1)
-      expect(d.pos.x).toBeLessThanOrEqual(39)
+      expect(Number.isFinite(d.pos.x)).toBe(true)
+      expect(Number.isFinite(d.pos.y)).toBe(true)
     }
     // 穿过树位向北再折返，扫掉整片掉落（散射半径 ≤0.6m，路径覆盖）
     const sweep1 = runTicks(state, I({ moveY: -1 }), 20)

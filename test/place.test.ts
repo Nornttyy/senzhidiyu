@@ -12,11 +12,11 @@ const withItem = (s: SimState, kind: 'sapling' | 'lanternPost', n = 1): SimState
 
 describe('canPlaceAt', () => {
   const s = initialSim(20, 20.8)
-  it('圈内合法、圈外/贴实体/出界非法', () => {
+  it('圈内合法、圈外/贴实体非法，负坐标仍可放置', () => {
     expect(canPlaceAt(s.world, s.player.pos, { x: 21.5, y: 21 })).toBe(true)
     expect(canPlaceAt(s.world, s.player.pos, { x: 26, y: 21 })).toBe(false)       // 超 3m
     expect(canPlaceAt(s.world, s.player.pos, { x: 20, y: 19.2 })).toBe(false)     // 贴篝火 <0.8m
-    expect(canPlaceAt(s.world, { x: 1.2, y: 20 }, { x: 0.5, y: 20 })).toBe(false) // 出界
+    expect(canPlaceAt(s.world, { x: -20, y: -20 }, { x: -20.5, y: -20 })).toBe(true)
   })
 })
 

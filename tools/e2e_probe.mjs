@@ -22,7 +22,8 @@ const state = () => page.evaluate(() => {
     wood: count('wood'), fluorite: count('fluorite'), sapling: count('sapling'), post: count('lanternPost'),
     torch: count('torch'),
     slot0: s.world.slots[0], selected: s.world.selected,
-    nodes: s.world.nodes.length, drops: s.world.drops.length, plantings: s.world.plantings.length,
+    nodes: s.world.nodes.length, starterTree: s.world.nodes.some((n) => n.id === 0),
+    drops: s.world.drops.length, plantings: s.world.plantings.length,
     posts: s.world.posts.length, campfires: s.world.campfires.length, torches: s.world.plantedTorches.length,
     clock: s.world.clock, phantom: s.world.phantom.mode,
     fedAge: s.world.campfires[0] ? s.time - s.world.campfires[0].fedAt : -1,
@@ -53,10 +54,10 @@ await page.waitForTimeout(3500) // 首秒解码+争抢双重卡顿沉降
 await page.click('text=开始游戏') // 主菜单起手（点击手势顺带解锁音频）
 await page.waitForTimeout(1200)
 
-// 1) 出生态：斧头开局、满血、9 节点
+// 1) 出生态：斧头开局、满血、手摆的 0 号树存在（外围另有程序区块资源）
 let s = await state()
 assert(s.slot0 && s.slot0.kind === 'axe' && s.selected === 0, `开局斧头选中 (${JSON.stringify(s.slot0)})`)
-assert(s.nodes === 9 && s.drops === 0 && s.hp === 100, `出生态 nodes=9 drops=0 hp=100`)
+assert(s.starterTree && s.drops === 0 && s.hp === 100, `出生态 starterTree=${s.starterTree} drops=0 hp=100`)
 
 // 2) 走向树0（中档 12.5,13）
 await walkUntil(['KeyW', 'KeyA'], `(() => {
@@ -78,7 +79,7 @@ await page.mouse.up()
 await page.waitForTimeout(400)
 await shot('e2e-1-tree-broken')
 s = await state()
-assert(s.nodes === 8, `树0 破坏节点移除 (nodes=${s.nodes})`)
+assert(!s.starterTree, `树0 破坏节点移除 (starterTree=${s.starterTree})`)
 assert(s.wood + s.drops >= 4, `掉落产生（含树苗 roll） wood=${s.wood} drops=${s.drops}`)
 
 // 4) 扫拾掉落：绕树位画个小圈
@@ -161,7 +162,7 @@ await page.evaluate(() => {
 })
 await page.waitForTimeout(400)
 s = await state()
-assert(s.plantings === 0 && s.nodes === 9, `90s 长成小树 (nodes=${s.nodes})`)
+assert(s.plantings === 0, `90s 长成小树 (nodes=${s.nodes})`)
 await shot('e2e-4-sapling-grown')
 
 // 8) 背包面板开合冒烟

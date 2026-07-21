@@ -3,15 +3,15 @@ import { nextRand } from './rand'
 import { dist, moveToward } from './vec'
 import type { PhantomState, Vec2 } from './types'
 
-/** 营地环带内取随机路标（环带几何上必在世界界内，见测试） */
-function pickWaypoint(seed: number): { target: Vec2; seed: number } {
+/** 以玩家为中心在环带内取路标，让幻影能跟随无限探索，而不是被留在出生地。 */
+function pickWaypoint(seed: number, center: Vec2): { target: Vec2; seed: number } {
   const r1 = nextRand(seed)
   const r2 = nextRand(r1.seed)
   const P = CONFIG.phantom
   const ang = r1.value * Math.PI * 2
   const rad = P.ringMin + r2.value * (P.ringMax - P.ringMin)
   return {
-    target: { x: CONFIG.landmark.x + Math.cos(ang) * rad, y: CONFIG.landmark.y + Math.sin(ang) * rad },
+    target: { x: center.x + Math.cos(ang) * rad, y: center.y + Math.sin(ang) * rad },
     seed: r2.seed,
   }
 }
@@ -19,15 +19,11 @@ function pickWaypoint(seed: number): { target: Vec2; seed: number } {
 /** 重生点：拒绝采样至距玩家 ≥ respawnMinDist；兜底取背离玩家的环带远点 */
 function respawn(seed: number, playerPos: Vec2): { pos: Vec2; seed: number } {
   for (let i = 0; i < 16; i++) {
-    const w = pickWaypoint(seed)
+    const w = pickWaypoint(seed, playerPos)
     seed = w.seed
     if (dist(w.target, playerPos) >= CONFIG.phantom.respawnMinDist) return { pos: w.target, seed }
   }
-  const dx = CONFIG.landmark.x - playerPos.x
-  const dy = CONFIG.landmark.y - playerPos.y
-  const len = Math.hypot(dx, dy) || 1
-  const R = CONFIG.phantom.ringMax
-  return { pos: { x: CONFIG.landmark.x + (dx / len) * R, y: CONFIG.landmark.y + (dy / len) * R }, seed }
+  return { pos: { x: playerPos.x + CONFIG.phantom.ringMax, y: playerPos.y }, seed }
 }
 
 export function stepPhantom(
@@ -45,7 +41,11 @@ export function stepPhantom(
 
   // 距离触发的转移（fade/gone 内不响应）
   if (allowActive && (mode === 'wander' || mode === 'stare')) {
-    if (d <= P.dissolveRange) { mode = 'fade'; modeT = 0; sigh = true }
+    if (d > P.leashM) {
+      const r = respawn(seed, playerPos)
+      pos = r.pos; seed = r.seed; target = r.pos
+      mode = 'wander'; modeT = 0; alpha = 0
+    } else if (d <= P.dissolveRange) { mode = 'fade'; modeT = 0; sigh = true }
     else if (mode === 'wander' && d <= P.stareRange) { mode = 'stare'; modeT = 0 }
     else if (mode === 'stare' && d > P.stareExit) { mode = 'wander'; modeT = 0 }
   }
@@ -53,7 +53,7 @@ export function stepPhantom(
   switch (mode) {
     case 'wander': {
       if (dist(pos, target) < 0.15) {
-        const w = pickWaypoint(seed)
+        const w = pickWaypoint(seed, playerPos)
         target = w.target; seed = w.seed
       }
       pos = moveToward(pos, target, P.speed * dt)

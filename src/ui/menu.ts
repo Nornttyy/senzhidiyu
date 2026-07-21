@@ -33,6 +33,8 @@ const CSS = `
 #wm-menu .row { display: flex; align-items: center; gap: 1rem; justify-content: space-between; margin: 1rem 0; }
 #wm-menu input[type=range] { width: 10rem; accent-color: #d8b26a; }
 #wm-menu .small { font-size: 0.75rem; opacity: 0.5; margin-top: 1.4rem; letter-spacing: 0.15rem; }
+#wm-menu .build { font-size: 0.72rem; color: #ffd98a; opacity: 0.8; margin: -1rem 0 1.25rem;
+  letter-spacing: 0.12rem; }
 `
 
 export class Menu {
@@ -98,6 +100,10 @@ export class Menu {
         sub.className = 'sub'
         sub.textContent = 'WHISPERS OF THE WOODS'
         add(sub)
+        const build = document.createElement('div')
+        build.className = 'build'
+        build.textContent = '无限森林 · 火把与古石美术更新版'
+        add(build)
         add(this.button('开始游戏', () => { this.started = true; this.hide(); this.cb.onStart() }))
       } else {
         add(this.button('继续', () => { this.hide(); this.cb.onResume() }))
@@ -143,7 +149,7 @@ export class Menu {
       const body = document.createElement('div')
       body.className = 'body'
       body.style.textAlign = 'center'
-      body.innerHTML = '制作 —— Nornttyy<br>美术生成 —— 千问 AI<br>程序协力 —— Claude<br><br>《森之低语》切片 A'
+      body.innerHTML = '制作 —— Nornttyy<br>美术生成 —— 千问 AI、OpenAI<br>程序协力 —— Claude<br><br>《森之低语》切片 A'
       add(body)
       add(this.button('返回', () => this.show(this.from)))
     }

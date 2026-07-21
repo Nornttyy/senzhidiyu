@@ -44,8 +44,8 @@ async function main(): Promise<void> {
   const kb = new Keyboard()
   kb.attach(window)
   kb.onFirstInput = () => sfx.unlock()
-  const player = new PlayerView(textures.seeker)
-  scene.world.addChild(player.sprite)
+  const player = new PlayerView(textures)
+  scene.world.addChild(player.container)
 
   const light = new LightLayer(app)
   app.stage.addChild(light.container)
@@ -79,6 +79,7 @@ async function main(): Promise<void> {
       sfx.unlock() // 开始按钮点击即用户手势,音频体面解锁
       ui.container.visible = true
       kb.clear(); sim.clearPendingEdges()
+      ui.toast('美术更新：火把与古石已经换新。')
       ui.toast('夜很深，跟随微光。')
       ui.toast('WASD 移动 · 左键 采集 · E 背包')
     },

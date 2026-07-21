@@ -4,7 +4,7 @@ import { lerp } from '../sim/vec'
 import { canPlaceAt, selectedKind } from '../sim/world'
 import { makeRadialTexture } from './lightLayer'
 import { iconTex, type GameTextures } from './textures'
-import type { NodeKind, SimState, Vec2 } from '../sim/types'
+import type { NodeKind, ResourceNode, SimState, Vec2 } from '../sim/types'
 
 const px = CONFIG.pxPerMeter
 const SHAKE_DUR = 0.3
@@ -21,28 +21,25 @@ function footSprite(tex: Texture, heightM: number): Sprite {
 
 /** 世界实体渲染：分档节点/尸体动画/掉落物/种植体/篝火/幻影/放置圈与残影（每帧状态驱动，幂等） */
 export class WorldView {
-  private nodeSprites = new Map<number, Sprite>()
+  private nodeSprites = new Map<ResourceNode['id'], Sprite>()
   private dropSprites = new Map<number, Sprite>()
   private plantSprites = new Map<number, Sprite>()
   private campfireSprites = new Map<number, { body: Sprite; flame: Sprite }>()
-  private torchSprites = new Map<number, { stick: Graphics; flame: Sprite }>()
+  private torchSprites = new Map<number, { body: Sprite; flame: Sprite }>()
   private corpses: Corpse[] = []
-  private postSprites: Sprite[] = []
+  private postSprites: { body: Sprite; halo: Sprite; phase: number }[] = []
   private phantom: Sprite
   private phantomEcho: Sprite
+  private phantomBaseScale: number
   private circle = new Graphics()
   private ghost = new Sprite()
-  private shakes = new Map<number, number>()
+  private shakes = new Map<ResourceNode['id'], number>()
   private glowTex = makeRadialTexture()
 
   constructor(private world: Container, overlay: Container, private tex: GameTextures, initial: SimState) {
     for (const n of initial.world.nodes) this.addNode(n.id, n.kind, n.tier, n.pos)
-    // 出生点古石地标（不发光不交互，纯寻路锚点；素材后补，程序占位）
-    const stone = new Graphics()
-    stone.poly([-22, 4, -14, -18, 2, -26, 16, -14, 20, 6, 8, 10, -10, 10])
-      .fill(0x4a4f46)
-      .poly([-14, -6, -4, -16, 8, -10, 4, 0, -8, 2])
-      .fill(0x5a6055)
+    // 出生点古石地标（不发光不交互，纯寻路锚点）
+    const stone = footSprite(tex.stone, CONFIG.sizes.stoneH)
     stone.position.set(CONFIG.landmark.x * px, CONFIG.landmark.y * px)
     stone.zIndex = CONFIG.landmark.y * px
     world.addChild(stone)
@@ -67,10 +64,13 @@ export class WorldView {
     // 黑底素材加法混合下中灰身躯加光量低——本体双重加法提亮成"可见的雾鬼"；
     // 不带光晕/光圈（用户裁定：幻影不是光源，不该照亮周围）
     this.phantom = footSprite(tex.phantom, CONFIG.sizes.phantomH)
+    this.phantomBaseScale = this.phantom.scale.x
     this.phantom.blendMode = 'add'
+    this.phantom.tint = 0xfff4df
     overlay.addChild(this.phantom)
     this.phantomEcho = footSprite(tex.phantom, CONFIG.sizes.phantomH)
     this.phantomEcho.blendMode = 'add'
+    this.phantomEcho.tint = 0xa8c6d8
     overlay.addChild(this.phantomEcho)
   }
 
@@ -80,7 +80,7 @@ export class WorldView {
       : { tex: this.tex.ore, h: CONFIG.tiers.ore[tier]!.heightM }
   }
 
-  private addNode(id: number, kind: NodeKind, tier: number, pos: Vec2): void {
+  private addNode(id: ResourceNode['id'], kind: NodeKind, tier: number, pos: Vec2): void {
     const { tex, h } = this.nodeTexH(kind, tier)
     const s = footSprite(tex, h)
     s.position.set(pos.x * px, pos.y * px)
@@ -90,10 +90,10 @@ export class WorldView {
   }
 
   /** nodeHit：受击摇晃 */
-  shake(nodeId: number): void { this.shakes.set(nodeId, 0) }
+  shake(nodeId: ResourceNode['id']): void { this.shakes.set(nodeId, 0) }
 
   /** nodeBroken：节点精灵转尸体动画（树倒/矿碎）；倒向由位置哈希定，确定可复现 */
-  breakNode(e: { nodeId: number; kind: NodeKind; pos: Vec2 }): void {
+  breakNode(e: { nodeId: ResourceNode['id']; kind: NodeKind; pos: Vec2 }): void {
     const sp = this.nodeSprites.get(e.nodeId)
     if (!sp) return
     this.nodeSprites.delete(e.nodeId)
@@ -105,15 +105,21 @@ export class WorldView {
     view: { aimM: Vec2; showPlace: boolean }): void {
     const C = CONFIG.corpse
     // 节点：新生（grown）与受击摇晃
+    const seenN = new Set<ResourceNode['id']>()
     for (const n of cur.world.nodes) {
+      seenN.add(n.id)
       if (!this.nodeSprites.has(n.id)) this.addNode(n.id, n.kind, n.tier, n.pos)
       const s = this.nodeSprites.get(n.id)!
       let t = this.shakes.get(n.id)
       if (t !== undefined) {
         t += realDt
-        if (t >= SHAKE_DUR) { this.shakes.delete(n.id); s.rotation = 0 }
+        if (t >= SHAKE_DUR) this.shakes.delete(n.id)
         else { this.shakes.set(n.id, t); s.rotation = Math.sin(t * 40) * 0.07 * (1 - t / SHAKE_DUR) }
-      }
+      } else s.rotation = Math.sin(timeS * 0.55 + n.pos.x * 0.37 + n.pos.y * 0.53) * 0.006
+    }
+    // 离开活动区块的程序资源会从 sim 卸载；对应精灵也及时销毁。
+    for (const [id, s] of this.nodeSprites) {
+      if (!seenN.has(id)) { s.destroy(); this.nodeSprites.delete(id); this.shakes.delete(id) }
     }
     // 尸体动画：树倒下再淡出，矿抖碎再淡出
     this.corpses = this.corpses.filter((c) => {
@@ -144,6 +150,7 @@ export class WorldView {
       }
       const bob = Math.sin(timeS * 3 + d.id) * 2
       s.position.set(d.pos.x * px, d.pos.y * px + bob)
+      s.rotation = Math.sin(timeS * 2.2 + d.id * 0.9) * 0.07
       s.zIndex = d.pos.y * px
     }
     for (const [id, s] of this.dropSprites) {
@@ -183,7 +190,13 @@ export class WorldView {
       halo.position.set(p.x * px, (p.y - CONFIG.sizes.postH * 0.82) * px)
       halo.zIndex = p.y * px + 1
       this.world.addChild(s, halo)
-      this.postSprites.push(s)
+      this.postSprites.push({ body: s, halo, phase: this.postSprites.length * 1.73 })
+    }
+    // 提灯柱的暖光轻轻呼吸；木柱保持稳固，不让整根柱子像橡皮一样摆动。
+    for (const p of this.postSprites) {
+      const breath = 1 + Math.sin(timeS * 2.4 + p.phase) * 0.06
+      p.halo.alpha = 0.46 + Math.sin(timeS * 2.1 + p.phase) * 0.08
+      p.halo.scale.set((1.2 * px * 2 * breath) / 512)
     }
     // 火源池同步:篝火(玩家搭建,火焰随余量;残烬=熄焰红点) / 插地火把
     const now = cur.time
@@ -220,27 +233,27 @@ export class WorldView {
     }
     const liveT = new Set(cur.world.plantedTorches.map((t) => t.id))
     for (const [id, sp] of this.torchSprites) {
-      if (!liveT.has(id)) { sp.stick.destroy(); sp.flame.destroy(); this.torchSprites.delete(id) }
+      if (!liveT.has(id)) { sp.body.destroy(); sp.flame.destroy(); this.torchSprites.delete(id) }
     }
     for (const t of cur.world.plantedTorches) {
       let sp = this.torchSprites.get(t.id)
       if (!sp) {
-        const stick = new Graphics()
-        stick.rect(-2, -26, 4, 26).fill(0x6b4a2a).rect(-3, -30, 6, 6).fill(0x2e2318)
-        stick.position.set(t.pos.x * px, t.pos.y * px)
-        stick.zIndex = t.pos.y * px
+        const body = footSprite(this.tex.torch, CONFIG.sizes.torchH)
+        body.position.set(t.pos.x * px, t.pos.y * px)
+        body.zIndex = t.pos.y * px
         const flame = new Sprite(this.glowTex)
         flame.anchor.set(0.5)
         flame.blendMode = 'add'
         flame.tint = 0xffb050
-        flame.position.set(t.pos.x * px, t.pos.y * px - 30)
+        flame.position.set(t.pos.x * px, (t.pos.y - CONFIG.sizes.torchH * 0.91) * px)
         flame.zIndex = t.pos.y * px + 1
-        this.world.addChild(stick, flame)
-        sp = { stick, flame }
+        this.world.addChild(body, flame)
+        sp = { body, flame }
         this.torchSprites.set(t.id, sp)
       }
       const k = Math.max(0, 1 - (now - t.litAt) / CONFIG.fire.torchBurnS)
       const breath = 1 + 0.2 * Math.sin(timeS * 11 + t.id * 1.7)
+      sp.body.rotation = Math.sin(timeS * 2.1 + t.id) * 0.01
       sp.flame.scale.set(((0.16 + 0.2 * k) * px * 2 * breath) / 512)
       sp.flame.alpha = 0.4 + 0.4 * k
     }
@@ -274,11 +287,19 @@ export class WorldView {
     const sx = this.world.position.x + xM * px
     const sy = this.world.position.y + yM * px
     const visible = a > 0.01
-    this.phantom.position.set(sx, sy)
-    this.phantom.alpha = a * 0.85
+    // 雾鬼没有脚步：本体缓慢上浮、侧摆，蓝灰残影稍慢半拍，像水彩在纸上晕开。
+    const driftX = Math.sin(timeS * 0.83) * 5
+    const floatY = Math.sin(timeS * 1.37 + 0.8) * 7
+    const pulse = 0.92 + Math.sin(timeS * 2.05) * 0.08
+    this.phantom.position.set(sx + driftX, sy + floatY)
+    this.phantom.rotation = Math.sin(timeS * 0.71) * 0.025
+    this.phantom.scale.set(this.phantomBaseScale * (1 + Math.sin(timeS * 1.17) * 0.025))
+    this.phantom.alpha = a * 0.82 * pulse
     this.phantom.visible = visible
-    this.phantomEcho.position.set(sx, sy)
-    this.phantomEcho.alpha = a * 0.7
+    this.phantomEcho.position.set(sx - driftX * 0.55, sy + floatY * 0.65 + 3)
+    this.phantomEcho.rotation = -Math.sin(timeS * 0.63) * 0.018
+    this.phantomEcho.scale.set(this.phantomBaseScale * (1.035 + Math.sin(timeS * 0.91) * 0.018))
+    this.phantomEcho.alpha = a * 0.44 * (1.05 - pulse * 0.35)
     this.phantomEcho.visible = visible
   }
 }

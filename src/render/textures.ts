@@ -1,21 +1,24 @@
-import { Assets, Container, Graphics, Texture, type Renderer } from 'pixi.js'
+import { Assets, Container, Graphics, Rectangle, Texture, type Renderer } from 'pixi.js'
 
 export interface GameTextures {
   seeker: Texture; tree: Texture; ore: Texture; campfire: Texture; post: Texture; phantom: Texture
   axe: Texture; wood: Texture; fluorite: Texture; sapling: Texture; heart: Texture
-  torchIcon: Texture // 程序生成(火把素材未出图)
+  torch: Texture; stone: Texture
+  torchIcon: Texture; postIcon: Texture
 }
 
-type LoadableTex = Exclude<keyof GameTextures, 'torchIcon'>
+type LoadableTex = Exclude<keyof GameTextures, 'torchIcon' | 'postIcon'>
 const FILES: Record<LoadableTex, string> = {
   seeker: 'seeker.png', tree: 'whisper-tree.png', ore: 'lumina-ore.png',
   campfire: 'campfire.png', post: 'lantern-post.png', phantom: 'phantom.png',
   axe: 'axe.png', wood: 'wood.png', fluorite: 'fluorite.png', sapling: 'sapling.png', heart: 'heart.png',
+  // 版本号让已经打开过旧占位图的浏览器重新下载正式素材。
+  torch: 'torch.png?v=3', stone: 'ancient-stone.png?v=3',
 }
 
-/** 物品图标/掉落物纹理（lanternPost/campfire 复用立绘;torch 用程序图标） */
+/** 物品图标/掉落物纹理（可放置物复用世界立绘） */
 export function iconTex(t: GameTextures, k: import('../sim/types').ItemKind): Texture {
-  if (k === 'lanternPost') return t.post
+  if (k === 'lanternPost') return t.postIcon
   if (k === 'torch') return t.torchIcon
   if (k === 'campfire') return t.campfire
   return t[k]
@@ -79,6 +82,17 @@ const builders: Record<LoadableTex, (g: Graphics) => void> = {
     g.circle(7, -18, 8).fill(0x9a3040)
     g.poly([-14, -14, 0, 2, 14, -14]).fill(0x9a3040)
   },
+  torch(g) {
+    g.roundRect(-4, -58, 8, 58, 3).fill(0x6b4a2a)
+    g.roundRect(-10, -66, 20, 12, 4).fill(0x3a3129)
+    g.poly([0, -92, -10, -70, 0, -64, 10, -70]).fill(0xffb050)
+    g.poly([0, -84, -5, -70, 0, -67, 5, -70]).fill(0xffe29a)
+  },
+  stone(g) {
+    g.poly([-30, 0, -35, -32, -22, -72, 0, -88, 24, -68, 34, -28, 28, 0]).fill(0x626b61)
+    g.circle(0, -44, 15).stroke({ color: 0x343d38, width: 3 })
+    g.circle(0, -44, 3).fill(0xb98a42)
+  },
 }
 
 async function loadOne(renderer: Renderer, name: LoadableTex): Promise<Texture> {
@@ -99,19 +113,18 @@ async function loadOne(renderer: Renderer, name: LoadableTex): Promise<Texture> 
 }
 
 export async function loadTextures(renderer: Renderer): Promise<GameTextures> {
-  const [seeker, tree, ore, campfire, post, phantom, axe, wood, fluorite, sapling, heart] = await Promise.all([
+  const [seeker, tree, ore, campfire, post, phantom, axe, wood, fluorite, sapling, heart, torch, stone] = await Promise.all([
     loadOne(renderer, 'seeker'), loadOne(renderer, 'tree'), loadOne(renderer, 'ore'),
     loadOne(renderer, 'campfire'), loadOne(renderer, 'post'), loadOne(renderer, 'phantom'),
     loadOne(renderer, 'axe'), loadOne(renderer, 'wood'), loadOne(renderer, 'fluorite'),
-    loadOne(renderer, 'sapling'), loadOne(renderer, 'heart'),
+    loadOne(renderer, 'sapling'), loadOne(renderer, 'heart'), loadOne(renderer, 'torch'), loadOne(renderer, 'stone'),
   ])
-  // 火把图标:素材未出图,程序绘制(木柄+焰头)
-  const tc = new Container()
-  const tg = new Graphics()
-  tg.roundRect(-4, -20, 8, 40, 3).fill(0x6b4a2a)
-  tg.circle(0, -26, 10).fill(0xffb050)
-  tg.circle(0, -28, 5).fill(0xffe29a)
-  tc.addChild(tg)
-  const torchIcon = renderer.generateTexture(tc)
-  return { seeker, tree, ore, campfire, post, phantom, axe, wood, fluorite, sapling, heart, torchIcon }
+  // 细长的世界立绘直接缩进物品格会变成一条线，图标只截取最有辨识度的顶部。
+  const topCrop = (tex: Texture, height: number): Texture => new Texture({
+    source: tex.source,
+    frame: new Rectangle(tex.frame.x, tex.frame.y, tex.frame.width, Math.min(tex.frame.height, height)),
+  })
+  const torchIcon = topCrop(torch, torch.width * 1.7)
+  const postIcon = topCrop(post, post.width * 1.12)
+  return { seeker, tree, ore, campfire, post, phantom, axe, wood, fluorite, sapling, heart, torch, stone, torchIcon, postIcon }
 }

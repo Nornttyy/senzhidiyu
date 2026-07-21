@@ -1,4 +1,5 @@
 import { CONFIG } from '../config'
+import { syncResourceChunks } from './chunks'
 
 export interface Vec2 { readonly x: number; readonly y: number }
 export type PlayerAction = 'idle' | 'walking' // 移动基态；采集为正交通道 PlayerState.gathering
@@ -19,11 +20,12 @@ export interface ItemStack { readonly kind: ItemKind; readonly count: number }
 
 export type NodeKind = 'tree' | 'ore'
 export interface ResourceNode {
-  readonly id: number
+  readonly id: number | string
   readonly kind: NodeKind
   readonly tier: number  // 档位下标，查 CONFIG.tiers
   readonly pos: Vec2
   readonly charges: number // 剩余采集次数
+  readonly chunk?: string // 程序生成节点所属区块；手工/种植节点没有此字段
 }
 
 export interface DropEntity {
@@ -63,6 +65,9 @@ export interface PhantomState {
 
 export interface WorldState {
   readonly nodes: readonly ResourceNode[]
+  readonly loadedChunks: readonly string[]
+  readonly resourceState: Readonly<Record<string, number>> // 只记录受损/砍空的程序资源
+  readonly mapSeed: number
   readonly posts: readonly Vec2[]
   readonly campfires: readonly Campfire[]
   readonly plantedTorches: readonly PlantedTorch[]
@@ -101,8 +106,8 @@ export type SimAction =
   | { readonly type: 'craft'; readonly recipe: number }
 
 export type SimEvent =
-  | { readonly type: 'nodeHit'; readonly nodeId: number; readonly pos: Vec2 }
-  | { readonly type: 'nodeBroken'; readonly kind: NodeKind; readonly tier: number; readonly pos: Vec2; readonly nodeId: number }
+  | { readonly type: 'nodeHit'; readonly nodeId: number | string; readonly pos: Vec2 }
+  | { readonly type: 'nodeBroken'; readonly kind: NodeKind; readonly tier: number; readonly pos: Vec2; readonly nodeId: number | string }
   | { readonly type: 'pickup'; readonly kind: ItemKind; readonly pos: Vec2 }
   | { readonly type: 'invFull' }
   | { readonly type: 'planted'; readonly pos: Vec2 }
@@ -131,6 +136,9 @@ export function initialWorld(seed: number): WorldState {
   slots[1] = { kind: 'torch', count: 2 } // 开局仁慈:保证第一夜
   return {
     nodes: [...trees, ...ores],
+    loadedChunks: [],
+    resourceState: {},
+    mapSeed: seed,
     posts: [],
     campfires: [],
     plantedTorches: [],
@@ -150,9 +158,10 @@ export function initialWorld(seed: number): WorldState {
 }
 
 export function initialSim(x: number, y: number, seed = 20260718): SimState {
+  const world = syncResourceChunks(initialWorld(seed), { x, y })
   return {
     time: 0,
     player: { pos: { x, y }, facing: 1, action: 'idle', prevAction: 'idle', actionT: 0, gathering: false, gatherT: 0, pendingFacingT: 0 },
-    world: initialWorld(seed),
+    world,
   }
 }

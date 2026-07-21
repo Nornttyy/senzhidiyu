@@ -36,9 +36,8 @@ export function stepPlayer(p: PlayerState, input: IntentInput, dt: number): Play
   if (moving) {
     const len = Math.hypot(input.moveX, input.moveY)
     const speed = CONFIG.player.speed * (gathering ? CONFIG.gather.moveSpeedFactor : 1)
-    const r = CONFIG.player.radius
-    x = Math.min(CONFIG.world.width - r, Math.max(r, x + (input.moveX / len) * speed * dt))
-    y = Math.min(CONFIG.world.height - r, Math.max(r, y + (input.moveY / len) * speed * dt))
+    x += (input.moveX / len) * speed * dt
+    y += (input.moveY / len) * speed * dt
   }
 
   // 朝向防抖仅在非采集时生效（采集期朝向由循环边界的 aimFacing 锁定）

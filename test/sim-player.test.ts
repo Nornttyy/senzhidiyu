@@ -20,9 +20,10 @@ describe('移动', () => {
     const d = Math.hypot(p.pos.x - 20, p.pos.y - 20)
     expect(d).toBeCloseTo(CONFIG.player.speed, 1)
   })
-  it('位置被世界边界收窄', () => {
+  it('可越过原世界边界继续移动', () => {
     const p = run(idle(), input({ moveX: -1 }), 30 * 20)
-    expect(p.pos.x).toBeCloseTo(CONFIG.player.radius, 5)
+    expect(p.pos.x).toBeCloseTo(20 - CONFIG.player.speed * 20, 5)
+    expect(p.pos.x).toBeLessThan(0)
   })
   it('有移动输入时 action=walking，停止后回 idle 且 actionT 归零', () => {
     let p = run(idle(), input({ moveX: 1 }), 3)

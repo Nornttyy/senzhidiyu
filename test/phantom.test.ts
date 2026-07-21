@@ -12,7 +12,7 @@ const I = (): IntentInput => ({ moveX: 0, moveY: 0, interact: false, place: fals
 const ph = (o: Partial<PhantomState> = {}): PhantomState => ({
   pos: { x: 32, y: 32 }, mode: 'wander', modeT: 0, alpha: 1, target: { x: 32, y: 32 }, ...o,
 })
-const far: Vec2 = { x: 2, y: 2 } // 始终在触发范围外的玩家位
+const far: Vec2 = { x: 20, y: 20 } // 始终在触发范围外的玩家位
 
 function runPh(p: PhantomState, playerPos: Vec2, seed: number, n: number) {
   let sighs = 0
@@ -29,16 +29,17 @@ describe('幻影状态机', () => {
     const b = runPh(ph(), far, 99, 300)
     expect(a.p.pos).toEqual(b.p.pos)
   })
-  it('wander 600 tick 始终在世界界内', () => {
-    let p = ph(); let seed = 7
+  it('玩家走到负坐标后，wander 仍在玩家周围活动', () => {
+    const explorer = { x: -120, y: -75 }
+    let p = ph({ pos: { x: -108, y: -75 }, target: { x: -108, y: -75 } }); let seed = 7
     for (let i = 0; i < 600; i++) {
-      const r = stepPhantom(p, far, seed, DT)
+      const r = stepPhantom(p, explorer, seed, DT)
       p = r.phantom; seed = r.seed
-      expect(p.pos.x).toBeGreaterThanOrEqual(1)
-      expect(p.pos.x).toBeLessThanOrEqual(CONFIG.world.width - 1)
-      expect(p.pos.y).toBeGreaterThanOrEqual(1)
-      expect(p.pos.y).toBeLessThanOrEqual(CONFIG.world.height - 1)
+      expect(Number.isFinite(p.pos.x)).toBe(true)
+      expect(Number.isFinite(p.pos.y)).toBe(true)
+      expect(dist(p.pos, explorer)).toBeLessThanOrEqual(P.leashM)
     }
+    expect(p.pos.x).toBeLessThan(0)
   })
   it('玩家进 8m 转 stare 且停在原地；8–9m 滞回维持；>9m 回 wander', () => {
     let r = stepPhantom(ph(), { x: 32, y: 32 + 7.5 }, 1, DT)

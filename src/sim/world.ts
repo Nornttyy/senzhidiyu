@@ -1,4 +1,5 @@
 import { CONFIG } from '../config'
+import { syncResourceChunks } from './chunks'
 import { clockInfo } from './clock'
 import { addItem, canAfford, moveSlot, payCost, takeAt } from './inventory'
 import { stepPhantom } from './phantom'
@@ -25,12 +26,10 @@ export const selectedKind = (w: WorldState): ItemKind | null => w.slots[w.select
 
 const PLACEABLE = new Set<ItemKind>(['sapling', 'lanternPost', 'torch', 'campfire'])
 
-/** 放置校验：玩家白圈内（rangeM）、界内（edgeMargin）、与既有实体间距 ≥ spacingM */
+/** 放置校验：玩家白圈内（rangeM），并与既有实体保持间距；无限地图没有边界判定。 */
 export function canPlaceAt(world: WorldState, playerPos: Vec2, aim: Vec2): boolean {
   const P = CONFIG.place
   if (dist(playerPos, aim) > P.rangeM) return false
-  if (aim.x < P.edgeMarginM || aim.x > CONFIG.world.width - P.edgeMarginM
-    || aim.y < P.edgeMarginM || aim.y > CONFIG.world.height - P.edgeMarginM) return false
   const others: Vec2[] = [
     CONFIG.landmark,
     ...world.nodes.map((n) => n.pos),
@@ -91,6 +90,7 @@ export function stepWorld(
   // 非斧头不起手：连挥砍姿态/敲击反馈都不给，避免"看着在砍却没效果"的假反馈（终审#2）
   const axeHeld = selectedKind(world) === 'axe'
   const player = stepPlayer(prevPlayer, axeHeld ? input : { ...input, interact: false }, dt)
+  world = syncResourceChunks(world, player.pos)
 
   // 挥砍命中：gatherT 跨越 hitAt 的 tick 结算，命中时刻需在交互半径内且手持斧头。
   // 双通道判定 gathering 布尔；无缝衔接回绕 tick（prev 1.19→cur 0.02）天然不满足跨越，无重复结算。
@@ -103,7 +103,10 @@ export function stepWorld(
       const node = world.nodes[idx]!
       const charges = node.charges - 1
       if (charges > 0) {
-        world = { ...world, nodes: world.nodes.map((n, i) => (i === idx ? { ...n, charges } : n)) }
+        const resourceState = typeof node.id === 'string'
+          ? { ...world.resourceState, [node.id]: charges }
+          : world.resourceState
+        world = { ...world, resourceState, nodes: world.nodes.map((n, i) => (i === idx ? { ...n, charges } : n)) }
         events.push({ type: 'nodeHit', nodeId: node.id, pos: node.pos })
       } else {
         const drops: DropEntity[] = [...world.drops]
@@ -130,16 +133,18 @@ export function stepWorld(
         } else {
           for (let i = 0; i < CONFIG.tiers.ore[node.tier]!.drop; i++) spawn('fluorite')
         }
-        world = { ...world, nodes: world.nodes.filter((_, i) => i !== idx), drops, nextId }
+        const resourceState = typeof node.id === 'string'
+          ? { ...world.resourceState, [node.id]: 0 }
+          : world.resourceState
+        world = { ...world, resourceState, nodes: world.nodes.filter((_, i) => i !== idx), drops, nextId }
         events.push({ type: 'nodeBroken', kind: node.kind, tier: node.tier, pos: node.pos, nodeId: node.id })
       }
     }
   }
 
-  // 掉落物：减速滑行 + 界内夹紧 + 延迟拾取（满包滞留并节流提示）
+  // 掉落物：减速滑行 + 延迟拾取（满包滞留并节流提示）
   if (world.drops.length) {
     const D = CONFIG.drops
-    const m = CONFIG.place.edgeMarginM
     let slots = world.slots
     let invFullAt = world.invFullAt
     const remain: DropEntity[] = []
@@ -147,8 +152,8 @@ export function stepWorld(
       const k = Math.max(0, 1 - D.dragPerS * dt)
       const vel = { x: d.vel.x * k, y: d.vel.y * k }
       const pos = {
-        x: clamp(d.pos.x + vel.x * dt, m, CONFIG.world.width - m),
-        y: clamp(d.pos.y + vel.y * dt, m, CONFIG.world.height - m),
+        x: d.pos.x + vel.x * dt,
+        y: d.pos.y + vel.y * dt,
       }
       const ripe = s.time - d.bornAt >= D.pickupDelayS
       if (ripe && dist(pos, player.pos) <= D.pickupRadiusM) {
