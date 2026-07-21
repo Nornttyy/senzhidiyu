@@ -79,7 +79,7 @@ async function main(): Promise<void> {
       sfx.unlock() // 开始按钮点击即用户手势,音频体面解锁
       ui.container.visible = true
       kb.clear(); sim.clearPendingEdges()
-      ui.toast('动画更新：短柄单手斧、迈步与挥砍动作已经加入。')
+      ui.toast('角色更新：正面待机、侧面骨骼动作和正确挥斧方向。')
       ui.toast('夜很深，跟随微光。')
       ui.toast('WASD 移动 · 左键 采集 · E 背包')
     },
