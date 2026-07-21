@@ -14,7 +14,6 @@ export interface EventSinks {
 export class PlayerView {
   readonly container = new Container()
   readonly sprite: Sprite
-  private held = new Sprite()
   private baseScale: number
   private heldKind: 'axe' | 'torch' | null = null
   private lastActionT = 0
@@ -26,30 +25,17 @@ export class PlayerView {
     this.sprite = new Sprite(tex.seeker)
     this.sprite.anchor.set(0.5, 1) // 脚底中心
     this.baseScale = (CONFIG.player.heightM * CONFIG.pxPerMeter) / tex.seeker.height
-    // 手持物作为角色子图层，跟着转身、走路和挥砍一起动。
-    this.held.visible = false
-    this.container.addChild(this.sprite, this.held)
+    this.container.addChild(this.sprite)
   }
 
-  /** 斧头和火把显示在手上；其他物品保持收进背包，避免遮住角色。 */
+  /** 切换完整的持物角色立绘，不再把物品图片直接叠在角色上。 */
   private syncHeld(kind: ReturnType<typeof selectedKind>): void {
     const next = kind === 'axe' || kind === 'torch' ? kind : null
     if (next === this.heldKind) return
     this.heldKind = next
-    this.held.visible = next !== null
-    if (next === null) return
-    const t = next === 'axe' ? this.tex.axe : this.tex.torch
-    this.held.texture = t
-    this.held.position.set(150, -395)
-    if (next === 'axe') {
-      this.held.anchor.set(0.72, 0.82)
-      this.held.scale.set(350 / t.height)
-      this.held.rotation = -0.12
-    } else {
-      this.held.anchor.set(0.5, 0.82)
-      this.held.scale.set(460 / t.height)
-      this.held.rotation = 0.08
-    }
+    this.sprite.texture = next === 'axe'
+      ? this.tex.seekerAxe
+      : next === 'torch' ? this.tex.seekerTorch : this.tex.seeker
   }
 
   update(prev: SimState, cur: SimState, alphaV: number, timeS: number, sinks: EventSinks): void {

@@ -79,7 +79,7 @@ async function main(): Promise<void> {
       sfx.unlock() // 开始按钮点击即用户手势,音频体面解锁
       ui.container.visible = true
       kb.clear(); sim.clearPendingEdges()
-      ui.toast('美术更新：火把与古石已经换新。')
+      ui.toast('美术更新：角色会自然握住斧头和火把。')
       ui.toast('夜很深，跟随微光。')
       ui.toast('WASD 移动 · 左键 采集 · E 背包')
     },

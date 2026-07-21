@@ -1,7 +1,8 @@
 import { Assets, Container, Graphics, Rectangle, Texture, type Renderer } from 'pixi.js'
 
 export interface GameTextures {
-  seeker: Texture; tree: Texture; ore: Texture; campfire: Texture; post: Texture; phantom: Texture
+  seeker: Texture; seekerAxe: Texture; seekerTorch: Texture
+  tree: Texture; ore: Texture; campfire: Texture; post: Texture; phantom: Texture
   axe: Texture; wood: Texture; fluorite: Texture; sapling: Texture; heart: Texture
   torch: Texture; stone: Texture
   torchIcon: Texture; postIcon: Texture
@@ -9,7 +10,8 @@ export interface GameTextures {
 
 type LoadableTex = Exclude<keyof GameTextures, 'torchIcon' | 'postIcon'>
 const FILES: Record<LoadableTex, string> = {
-  seeker: 'seeker.png', tree: 'whisper-tree.png', ore: 'lumina-ore.png',
+  seeker: 'seeker.png', seekerAxe: 'seeker-axe.png?v=1', seekerTorch: 'seeker-torch.png?v=1',
+  tree: 'whisper-tree.png', ore: 'lumina-ore.png',
   campfire: 'campfire.png', post: 'lantern-post.png', phantom: 'phantom.png',
   axe: 'axe.png', wood: 'wood.png', fluorite: 'fluorite.png', sapling: 'sapling.png', heart: 'heart.png',
   // 版本号让已经打开过旧占位图的浏览器重新下载正式素材。
@@ -25,14 +27,19 @@ export function iconTex(t: GameTextures, k: import('../sim/types').ItemKind): Te
 }
 
 /** 素材缺失时的程序占位（形状 y 以脚底为 0 向上为负） */
+const drawSeeker = (g: Graphics): void => {
+  g.roundRect(-20, -78, 40, 78, 12).fill(0x8a8f7a)
+  g.circle(0, -64, 15).fill(0x6f7462)
+  g.circle(-5, -64, 3).fill(0xffdf8a)
+  g.circle(5, -64, 3).fill(0xffdf8a)
+  g.circle(-16, -34, 6).fill(0xffc862)
+}
+
 const builders: Record<LoadableTex, (g: Graphics) => void> = {
-  seeker(g) {
-    g.roundRect(-20, -78, 40, 78, 12).fill(0x8a8f7a)
-    g.circle(0, -64, 15).fill(0x6f7462)
-    g.circle(-5, -64, 3).fill(0xffdf8a)
-    g.circle(5, -64, 3).fill(0xffdf8a)
-    g.circle(-16, -34, 6).fill(0xffc862)
-  },
+  seeker: drawSeeker,
+  // 持物合成立绘缺失时退回角色占位，不再把物品图片硬贴到角色身上。
+  seekerAxe: drawSeeker,
+  seekerTorch: drawSeeker,
   tree(g) {
     g.rect(-7, -62, 14, 62).fill(0x2e4038)
     g.circle(0, -84, 34).fill(0x2f5a4c)
@@ -113,8 +120,9 @@ async function loadOne(renderer: Renderer, name: LoadableTex): Promise<Texture> 
 }
 
 export async function loadTextures(renderer: Renderer): Promise<GameTextures> {
-  const [seeker, tree, ore, campfire, post, phantom, axe, wood, fluorite, sapling, heart, torch, stone] = await Promise.all([
-    loadOne(renderer, 'seeker'), loadOne(renderer, 'tree'), loadOne(renderer, 'ore'),
+  const [seeker, seekerAxe, seekerTorch, tree, ore, campfire, post, phantom, axe, wood, fluorite, sapling, heart, torch, stone] = await Promise.all([
+    loadOne(renderer, 'seeker'), loadOne(renderer, 'seekerAxe'), loadOne(renderer, 'seekerTorch'),
+    loadOne(renderer, 'tree'), loadOne(renderer, 'ore'),
     loadOne(renderer, 'campfire'), loadOne(renderer, 'post'), loadOne(renderer, 'phantom'),
     loadOne(renderer, 'axe'), loadOne(renderer, 'wood'), loadOne(renderer, 'fluorite'),
     loadOne(renderer, 'sapling'), loadOne(renderer, 'heart'), loadOne(renderer, 'torch'), loadOne(renderer, 'stone'),
@@ -126,5 +134,8 @@ export async function loadTextures(renderer: Renderer): Promise<GameTextures> {
   })
   const torchIcon = topCrop(torch, torch.width * 1.7)
   const postIcon = topCrop(post, post.width * 1.12)
-  return { seeker, tree, ore, campfire, post, phantom, axe, wood, fluorite, sapling, heart, torch, stone, torchIcon, postIcon }
+  return {
+    seeker, seekerAxe, seekerTorch, tree, ore, campfire, post, phantom,
+    axe, wood, fluorite, sapling, heart, torch, stone, torchIcon, postIcon,
+  }
 }

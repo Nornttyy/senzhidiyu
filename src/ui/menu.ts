@@ -102,7 +102,7 @@ export class Menu {
         add(sub)
         const build = document.createElement('div')
         build.className = 'build'
-        build.textContent = '无限森林 · 火把与古石美术更新版'
+        build.textContent = '无限森林 · 持物角色重绘版'
         add(build)
         add(this.button('开始游戏', () => { this.started = true; this.hide(); this.cb.onStart() }))
       } else {
