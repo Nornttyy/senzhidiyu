@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#07090d">
+  <meta name="description" content="《不要开门》2D 恐怖游戏视野原型">
+  <title>Do Not Open</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #e4edea;
+      --muted: #8da09b;
+      --line: rgba(175, 209, 199, 0.16);
+      --panel: rgba(14, 18, 23, 0.88);
+      --accent: #5fd0bd;
+      --danger: #b64a4f;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      min-height: 100%;
+      margin: 0;
+      background:
+        radial-gradient(circle at 50% -20%, rgba(65, 105, 99, 0.2), transparent 44rem),
+        #07090d;
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      padding: clamp(18px, 4vw, 48px);
+    }
+
+    .page {
+      width: min(1180px, 100%);
+    }
+
+    header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 18px;
+    }
+
+    .eyebrow {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: Georgia, "Songti SC", serif;
+      font-size: clamp(30px, 5vw, 58px);
+      font-weight: 500;
+      letter-spacing: 0.08em;
+    }
+
+    header p {
+      max-width: 30rem;
+      margin: 0 0 6px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+      text-align: right;
+    }
+
+    #game-shell {
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #050609;
+      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.48);
+    }
+
+    #unity-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: #050609;
+      outline: none;
+    }
+
+    #loading {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-content: center;
+      gap: 14px;
+      padding: 24px;
+      background: #080a0f;
+      text-align: center;
+      transition: opacity 320ms ease;
+    }
+
+    #loading.done {
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .loading-title {
+      font-family: Georgia, "Songti SC", serif;
+      font-size: 24px;
+      letter-spacing: 0.12em;
+    }
+
+    .track {
+      overflow: hidden;
+      width: min(320px, 70vw);
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    #progress {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--accent);
+      transition: width 120ms linear;
+    }
+
+    #status {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    #fullscreen {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      z-index: 2;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 8px 12px;
+      background: var(--panel);
+      color: var(--ink);
+      font: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+    }
+
+    #fullscreen:hover { border-color: rgba(95, 208, 189, 0.48); }
+
+    #banner {
+      display: none;
+      margin-top: 12px;
+      border: 1px solid rgba(182, 74, 79, 0.4);
+      border-radius: 8px;
+      padding: 12px 14px;
+      background: rgba(88, 23, 28, 0.34);
+      color: #f0c9cb;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    kbd {
+      border: 1px solid var(--line);
+      border-bottom-color: rgba(175, 209, 199, 0.32);
+      border-radius: 4px;
+      padding: 2px 6px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--ink);
+      font: inherit;
+    }
+
+    @media (max-width: 700px) {
+      body { padding: 14px; }
+      header { display: block; }
+      header p { margin-top: 10px; text-align: left; }
+      #game-shell { border-radius: 8px; }
+      footer { display: block; line-height: 1.8; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div>
+        <span class="eyebrow">2D HORROR PROTOTYPE</span>
+        <h1>不要开门</h1>
+      </div>
+      <p>墙后有什么，你看不见。穿过门洞，测试俯视角遮挡视野。</p>
+    </header>
+
+    <main id="game-shell">
+      <canvas id="unity-canvas" tabindex="-1"></canvas>
+      <div id="loading">
+        <div class="loading-title">正在进入公寓</div>
+        <div class="track"><div id="progress"></div></div>
+        <div id="status">准备游戏文件…</div>
+      </div>
+      <button id="fullscreen" type="button">全屏</button>
+    </main>
+
+    <div id="banner" role="alert"></div>
+
+    <footer>
+      <span><kbd>WASD</kbd> / 方向键移动　<kbd>R</kbd> 重置位置</span>
+      <span>建议使用桌面浏览器与键盘</span>
+    </footer>
+  </div>
+
+  <script>
+    const canvas = document.querySelector("#unity-canvas");
+    const loading = document.querySelector("#loading");
+    const progress = document.querySelector("#progress");
+    const status = document.querySelector("#status");
+    const banner = document.querySelector("#banner");
+    const fullscreen = document.querySelector("#fullscreen");
+
+    const buildUrl = "Build";
+    const loaderUrl = buildUrl + "/do-not-open-web.LAcJMg.loader.js";
+    const config = {
+      arguments: [],
+      dataUrl: buildUrl + "/do-not-open-web.LAcJMg.data.unityweb",
+      frameworkUrl: buildUrl + "/do-not-open-web.LAcJMg.framework.js.unityweb",
+      codeUrl: buildUrl + "/do-not-open-web.LAcJMg.wasm.unityweb",
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: "Nornttyy",
+      productName: "Do Not Open",
+      productVersion: "0.1.0",
+      devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+      showBanner(message, type) {
+        banner.textContent = message;
+        banner.style.display = "block";
+        if (type !== "error") setTimeout(() => banner.style.display = "none", 5000);
+      }
+    };
+
+    let unityInstance;
+    const loader = document.createElement("script");
+    loader.src = loaderUrl;
+    loader.onload = () => {
+      createUnityInstance(canvas, config, value => {
+        const percent = Math.round(value * 100);
+        progress.style.width = percent + "%";
+        status.textContent = "加载中 " + percent + "%";
+      }).then(instance => {
+        unityInstance = instance;
+        loading.classList.add("done");
+        canvas.focus();
+      }).catch(message => {
+        banner.textContent = message;
+        banner.style.display = "block";
+        status.textContent = "加载失败";
+      });
+    };
+    loader.onerror = () => {
+      banner.textContent = "游戏加载器下载失败，请刷新页面后重试。";
+      banner.style.display = "block";
+    };
+    document.body.appendChild(loader);
+
+    canvas.addEventListener("pointerdown", () => canvas.focus());
+    fullscreen.addEventListener("click", () => unityInstance?.SetFullscreen(1));
+  </script>
+</body>
+</html>
