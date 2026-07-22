@@ -90,6 +90,7 @@
       height: 100%;
       background: #050609;
       outline: none;
+      image-rendering: pixelated;
     }
 
     #loading {
@@ -201,7 +202,7 @@
         <span class="eyebrow">2D HORROR PROTOTYPE</span>
         <h1>不要开门</h1>
       </div>
-      <p>墙后有什么，你看不见。穿过门洞，测试俯视角遮挡视野。</p>
+      <p>旧公寓看起来很安静。用方向键走走看，也许有东西正在移动。</p>
     </header>
 
     <main id="game-shell">
@@ -231,12 +232,12 @@
     const fullscreen = document.querySelector("#fullscreen");
 
     const buildUrl = "Build";
-    const loaderUrl = buildUrl + "/do-not-open-web.LAcJMg.loader.js";
+    const loaderUrl = buildUrl + "/do-not-open-pixel-web.1YgYI5.loader.js";
     const config = {
       arguments: [],
-      dataUrl: buildUrl + "/do-not-open-web.LAcJMg.data.unityweb",
-      frameworkUrl: buildUrl + "/do-not-open-web.LAcJMg.framework.js.unityweb",
-      codeUrl: buildUrl + "/do-not-open-web.LAcJMg.wasm.unityweb",
+      dataUrl: buildUrl + "/do-not-open-pixel-web.1YgYI5.data.unityweb",
+      frameworkUrl: buildUrl + "/do-not-open-pixel-web.1YgYI5.framework.js.unityweb",
+      codeUrl: buildUrl + "/do-not-open-pixel-web.1YgYI5.wasm.unityweb",
       streamingAssetsUrl: "StreamingAssets",
       companyName: "Nornttyy",
       productName: "Do Not Open",
